@@ -99,13 +99,21 @@ namespace FlowFieldNavigation
             NativeArray<PortalNode> portalNodes = PortalNodes;
             NativeArray<PortalToPortal> porPtrs = PorPtrs;
 
+
+            //Mark starting portals
             for (int i = 0; i < DijkstraStartIndicies.Length; i++)
             {
                 int index = DijkstraStartIndicies[i];
                 PortalTraversalData portalData = PortalTraversalDataArray[index];
                 portalData.Mark |= PortalTraversalMark.DijkstraTraversed;
                 portalTraversalDataArray[index] = portalData;
-                EnqueueNeighbours(index, portalData.DistanceFromTarget);
+            }
+
+            //Enqueue neighbours of starting portals
+            for (int i = 0; i < DijkstraStartIndicies.Length; i++)
+            {
+                int index = DijkstraStartIndicies[i];
+                EnqueueNeighbours(index, PortalTraversalDataArray[index].DistanceFromTarget);
             }
 
             int curIndex = GetNextIndex();
