@@ -251,6 +251,25 @@ namespace FlowFieldNavigation
             int2 general2d = local2d + sectorStart;
             return gridStartPos + new float2(general2d.x * tileSize + tileSize / 2, general2d.y * tileSize + tileSize / 2);
         }
+        internal static BarycentricCoordinates GetBarycentricCoordinatesForEachVectorInTheOrderUVW(float2 a, float2 b, float2 c, float2 p)
+        {
+            float2 v0 = b - a, v1 = c - a, v2 = p - a;
+            float d00 = math.dot(v0, v0);
+            float d01 = math.dot(v0, v1);
+            float d11 = math.dot(v1, v1);
+            float d20 = math.dot(v2, v0);
+            float d21 = math.dot(v2, v1);
+            float denom = d00 * d11 - d01 * d01;
+            float v = (d11 * d20 - d01 * d21) / denom;
+            float w = (d00 * d21 - d01 * d20) / denom;
+            float u = 1.0f - v - w;
+            return new BarycentricCoordinates()
+            {
+                v = v,
+                u = u,
+                w = w,
+            };
+        }
     }
 
 

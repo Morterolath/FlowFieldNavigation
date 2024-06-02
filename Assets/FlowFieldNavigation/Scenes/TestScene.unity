@@ -1284,6 +1284,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5797102840990353135, guid: 36909ba34dc9cc34aa509e8036cbe263,
         type: 3}
+      propertyPath: _debugDestination
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5797102840990353135, guid: 36909ba34dc9cc34aa509e8036cbe263,
+        type: 3}
       propertyPath: _debuggingEnabled
       value: 1
       objectReference: {fileID: 0}
@@ -1365,6 +1370,11 @@ PrefabInstance:
       propertyPath: _navigationManager
       value: 
       objectReference: {fileID: 1328932016}
+    - target: {fileID: 5836007236481813446, guid: f55c253bbe9585643ad7034e78074555,
+        type: 3}
+      propertyPath: _currentRange
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 5836007236481813446, guid: f55c253bbe9585643ad7034e78074555,
         type: 3}
       propertyPath: _navigationManager

@@ -68,12 +68,14 @@ namespace FlowFieldNavigation
         EditorTileIslandDebugger _islandDebugger;
         EditorHeightMeshDebugger _heightMeshDebugger;
         EditorTileDebugger _tileDebugger;
+        EditorPathGoalDebugger _pathGoalDebugger;
         EditorNavigationVolumeDebugger _navVolDebugger;
 
         Camera _overlayCamera;
         PortalHeightBuilder _portalHeightBuilder;
         TileCenterHeightBuilder _tileCenterHeightBuilder;
         SectorCornerHeightBuilder _sectorCornerHeightBuilder;
+        GoalIndexDebugMeshBuilder _goalIndexDebugMeshBuilder;
         private void Start()
         {
             _overlayCamera = GetComponent<Camera>();
@@ -93,7 +95,9 @@ namespace FlowFieldNavigation
             _portalHeightBuilder = new PortalHeightBuilder(_navigationManager);
             _tileCenterHeightBuilder = new TileCenterHeightBuilder(_navigationManager);
             _sectorCornerHeightBuilder = new SectorCornerHeightBuilder(_navigationManager);
+            _goalIndexDebugMeshBuilder = new GoalIndexDebugMeshBuilder();
             _navVolDebugger = new EditorNavigationVolumeDebugger(_navigationManager);
+            _pathGoalDebugger = new EditorPathGoalDebugger(_navigationManager, _goalIndexDebugMeshBuilder);
         }
         private void Update()
         {
@@ -136,7 +140,7 @@ namespace FlowFieldNavigation
                 if (_debugPortalSequence) { _pathDebugger.DebugPortalSequence(AgentToDebug, _portalHeightBuilder.GetPortalHeights(_costFieldOffset)); }
                 if (_debugIntegrationField) { _pathDebugger.DebugIntegrationField(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
                 if (_debugFlowField) { _pathDebugger.DebugFlowField(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
-                if (_debugDestination) { _pathDebugger.DebugDestination(AgentToDebug); }
+                if (_debugDestination) { _pathGoalDebugger.DebugGoal(AgentToDebug); }
                 if (_debugDynamicAreaIntegration) { _pathDebugger.DebugDynamicAreaIntegration(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
                 if (_debugDynamicAreaFlow) { _pathDebugger.DebugDynamicAreaFlow(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
                 if (_debugPickedSectors) { _pathDebugger.DebugPickedSectors(AgentToDebug, _sectorCornerHeightBuilder.GetSectorCornerHeights()); }
