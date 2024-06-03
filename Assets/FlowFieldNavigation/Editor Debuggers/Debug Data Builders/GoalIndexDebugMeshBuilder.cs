@@ -118,7 +118,7 @@ namespace FlowFieldNavigation
 
             //set vertex heights
             NativeArray<float3> vertsAsArray = verts.AsArray();
-            HeightMeshImmediateQueryManager.SetHeightsAsY(ref vertsAsArray, trigSpatHashGrid, heightMeshVerts);
+            HeightMeshImmediateQueryManager.SetHeightsAsYBurst(ref vertsAsArray, trigSpatHashGrid, heightMeshVerts);
 
             //Set triangles
             NativeHashSet<int> usedIndexMap = new NativeHashSet<int>(0, Allocator.Temp);

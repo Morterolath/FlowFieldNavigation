@@ -3,6 +3,7 @@ using Unity.Jobs;
 using UnityEngine;
 using Unity.Mathematics;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace FlowFieldNavigation
 {
@@ -19,12 +20,14 @@ namespace FlowFieldNavigation
         }
         internal List<Mesh> GetDebugMesh()
         {
-            if (!_isCreated) { Create(); }
+            if (true) { Create(); }
             return _debugMeshes;
         }
 
         void Create()
         {
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
             _isCreated = true;
             int fieldColAmount = FlowFieldUtilities.FieldColAmount;
             int fieldRowAmount = FlowFieldUtilities.FieldRowAmount;
@@ -39,7 +42,7 @@ namespace FlowFieldNavigation
                     int meshColAmount = endIndex.x - startIndex.x + 2;
                     int meshRowAmount = endIndex.y - startIndex.y + 2;
 
-                    NativeArray<Vector3> verts = new NativeArray<Vector3>(meshColAmount * meshRowAmount, Allocator.Persistent);
+                    NativeArray<float3> verts = new NativeArray<float3>(meshColAmount * meshRowAmount, Allocator.Persistent);
                     NativeArray<int> trigs = new NativeArray<int>((meshColAmount - 1) * (meshRowAmount - 1) * 4, Allocator.Persistent);
                     TileWireMeshBuildJob tileMeshCalculation = new TileWireMeshBuildJob()
                     {
@@ -63,13 +66,15 @@ namespace FlowFieldNavigation
                     }
                 }
             }
+            sw.Stop();
+            UnityEngine.Debug.Log(sw.Elapsed.TotalMilliseconds);
         }
 
-        Mesh CreateMesh(NativeArray<Vector3> verts, NativeArray<int> trigs)
+        Mesh CreateMesh(NativeArray<float3> verts, NativeArray<int> trigs)
         {
             Mesh mesh = new Mesh();
             mesh.Clear();
-            mesh.vertices = verts.ToArray();
+            mesh.SetVertices(verts);
             mesh.triangles = new int[0];
             mesh.RecalculateNormals();
             mesh.SetIndices(trigs.ToArray(), MeshTopology.Lines, 0);

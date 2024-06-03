@@ -23,6 +23,10 @@ namespace FlowFieldNavigation
         [BurstCompile]
         internal static float GetHeightBurst(in float2 point, in TriangleSpatialHashGrid triangleSpatialHashGrid, in NativeArray<float3> heightMeshVerticies)
         {
+            return GetHeight(point, triangleSpatialHashGrid, heightMeshVerticies);
+        }
+        internal static float GetHeight(float2 point, TriangleSpatialHashGrid triangleSpatialHashGrid, NativeArray<float3> heightMeshVerticies)
+        {
             float curHeight = float.MinValue;
             for (int i = 0; i < triangleSpatialHashGrid.GetGridCount(); i++)
             {
@@ -53,7 +57,11 @@ namespace FlowFieldNavigation
             return math.select(curHeight, 0, curHeight == float.MinValue);
         }
         [BurstCompile]
-        internal static void SetHeightsAsY(ref NativeArray<float3> points, in TriangleSpatialHashGrid TriangleSpatialHashGrid, in NativeArray<float3> HeightMeshVerts)
+        internal static void SetHeightsAsYBurst(ref NativeArray<float3> points, in TriangleSpatialHashGrid TriangleSpatialHashGrid, in NativeArray<float3> HeightMeshVerts)
+        {
+            SetHeightsAsY(points, TriangleSpatialHashGrid, HeightMeshVerts);
+        }
+        internal static void SetHeightsAsY(NativeArray<float3> points, TriangleSpatialHashGrid TriangleSpatialHashGrid, NativeArray<float3> HeightMeshVerts)
         {
             for(int pointIndexToSet = 0; pointIndexToSet < points.Length; pointIndexToSet++)
             {
