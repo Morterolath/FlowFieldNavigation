@@ -95,7 +95,7 @@ namespace FlowFieldNavigation
             _portalHeightBuilder = new PortalHeightBuilder(_navigationManager);
             _tileCenterHeightBuilder = new TileCenterHeightBuilder(_navigationManager);
             _sectorCornerHeightBuilder = new SectorCornerHeightBuilder(_navigationManager);
-            _goalIndexDebugMeshBuilder = new GoalIndexDebugMeshBuilder();
+            _goalIndexDebugMeshBuilder = new GoalIndexDebugMeshBuilder(_navigationManager);
             _navVolDebugger = new EditorNavigationVolumeDebugger(_navigationManager);
             _pathGoalDebugger = new EditorPathGoalDebugger(_navigationManager, _goalIndexDebugMeshBuilder);
         }

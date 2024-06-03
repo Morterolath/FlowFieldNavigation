@@ -19,6 +19,7 @@ namespace FlowFieldNavigation
         internal MovementManager MovementManager;
         internal CostFieldEditManager FieldEditManager;
         internal FieldImmediateQueryManager FieldImmediateQueryManager;
+        internal HeightMeshImmediateQueryManager HeightMeshImmediateQueryManager;
         internal AgentDataReferanceManager AgentReferanceManager;
         internal AgentAdditionSystem AgentAdditionSystem;
         internal AgentRemovingSystem AgentRemovingSystem;
@@ -108,6 +109,7 @@ namespace FlowFieldNavigation
             _navigationUpdater = new NavigationUpdater(this, RequestAccumulator);
             FlockDataContainer = new FlockDataContainer();
             FieldImmediateQueryManager = new FieldImmediateQueryManager(this);
+            HeightMeshImmediateQueryManager = new HeightMeshImmediateQueryManager(this);
             AgentReferanceManager = new AgentDataReferanceManager();
             AgentAdditionSystem = new AgentAdditionSystem(this);
             AgentDataReadSystem = new AgentDataReadSystem(this);

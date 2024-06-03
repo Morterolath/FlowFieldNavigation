@@ -469,7 +469,7 @@ PrefabInstance:
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
       propertyPath: RandomHeights
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
@@ -1373,7 +1373,7 @@ PrefabInstance:
     - target: {fileID: 5836007236481813446, guid: f55c253bbe9585643ad7034e78074555,
         type: 3}
       propertyPath: _currentRange
-      value: 5
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 5836007236481813446, guid: f55c253bbe9585643ad7034e78074555,
         type: 3}
@@ -1385,6 +1385,11 @@ PrefabInstance:
       propertyPath: _navigationDebugger
       value: 
       objectReference: {fileID: 870189873970780506}
+    - target: {fileID: 5836007236481813446, guid: f55c253bbe9585643ad7034e78074555,
+        type: 3}
+      propertyPath: HoldToContuniouslySendPathRequest
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5836007236481813448, guid: f55c253bbe9585643ad7034e78074555,
         type: 3}
       propertyPath: m_Name

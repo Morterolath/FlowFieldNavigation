@@ -29,6 +29,7 @@ public class AgentSelectionController : MonoBehaviour
     [Range(0, float.MaxValue)]
     [SerializeField]
     float _currentRange = 0;
+    [SerializeField] bool HoldToContuniouslySendPathRequest;
     private void Start()
     {
         _agentsToCreate = _startingAgentCount;
@@ -147,8 +148,10 @@ public class AgentSelectionController : MonoBehaviour
             }
         }
 
-
-        if (Input.GetMouseButtonDown(1) && _selectedAgents.Count != 0)
+        bool rightMouseClicked = Input.GetMouseButtonDown(1);
+        bool rightMouseBeingHold = Input.GetMouseButton(1);
+        bool holdEnabledAndRightMouseBeingHold = rightMouseBeingHold && HoldToContuniouslySendPathRequest;
+        if ((rightMouseClicked || holdEnabledAndRightMouseBeingHold) && _selectedAgents.Count != 0)
         {
             SetDestination();
         }

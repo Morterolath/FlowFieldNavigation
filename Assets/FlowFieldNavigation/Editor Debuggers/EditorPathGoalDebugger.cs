@@ -28,7 +28,7 @@ namespace FlowFieldNavigation
 
 			//Debug destination point
 			Vector2 destination = destinationData.Destination;
-			Vector3 destination3 = new Vector3(destination.x, _navigationManager.FieldImmediateQueryManager.GetHeight(destination), destination.y);
+			Vector3 destination3 = new Vector3(destination.x, _navigationManager.HeightMeshImmediateQueryManager.GetHeight(destination), destination.y);
 			Gizmos.color = Color.blue;
 			Gizmos.DrawSphere(destination3, 0.3f);
 
@@ -41,7 +41,7 @@ namespace FlowFieldNavigation
             List<Mesh> debugMeshes = _debugMeshBuilder.GetDebugMeshes(destination, range, pathIndex);
 			for(int i = 0; i < debugMeshes.Count; i++)
 			{
-				Gizmos.DrawWireMesh(debugMeshes[i]);
+				Gizmos.DrawWireMesh(debugMeshes[i], new Vector3(0,0.1f,0));
 			}
         }
 	}
