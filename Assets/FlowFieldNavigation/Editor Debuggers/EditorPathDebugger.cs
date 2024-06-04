@@ -227,24 +227,25 @@ namespace FlowFieldNavigation
             {
                 PortalTraversalDataRecord record = porTravDataRecod[i];
                 PortalNode node = portalNodes[record.PortalIndex];
+                Vector3 portalPos = node.GetPosition(tileSize, FlowFieldUtilities.FieldGridStartPosition);
+                portalPos.y = portalHeights[record.PortalIndex];
+                Vector3 labelPos = portalPos + new Vector3(0, 3, 0);
+                if ((record.Mark & PortalTraversalMark.Explored) == PortalTraversalMark.Explored)
+                {
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawSphere(portalPos, 0.25f);
+                }
                 if ((record.Mark & PortalTraversalMark.DijkstraPicked) == PortalTraversalMark.DijkstraPicked)
                 {
                     Gizmos.color = Color.white;
-                    Vector3 portalPos = node.GetPosition(tileSize, FlowFieldUtilities.FieldGridStartPosition);
-                    portalPos.y = portalHeights[record.PortalIndex];
-                    Vector3 labelPos = portalPos + new Vector3(0, 3, 0);
-                    Handles.Label(labelPos, record.PortalIndex + " : " + record.DistanceFromTarget.ToString());
-                    Gizmos.DrawSphere(portalPos, 0.25f);
+                    Gizmos.DrawSphere(portalPos + new Vector3(-0.35f, 0, 0), 0.25f);
                 }
-                else if ((record.Mark & PortalTraversalMark.Reduced) == PortalTraversalMark.Reduced)
+                if ((record.Mark & PortalTraversalMark.DijkstraTraversable) == PortalTraversalMark.DijkstraTraversable)
                 {
                     Gizmos.color = Color.black;
-                    Vector3 portalPos = node.GetPosition(tileSize, FlowFieldUtilities.FieldGridStartPosition);
-                    portalPos.y = portalHeights[record.PortalIndex];
-                    Vector3 labelPos = portalPos + new Vector3(0, 3, 0);
-                    Handles.Label(labelPos, record.PortalIndex + " : " + record.DistanceFromTarget.ToString());
-                    Gizmos.DrawSphere(portalPos, 0.25f);
+                    Gizmos.DrawSphere(portalPos + new Vector3(0.35f, 0, 0), 0.25f);
                 }
+                Handles.Label(labelPos, record.PortalIndex + " : " + record.DistanceFromTarget.ToString());
             }
         }
         internal void DebugTargetNeighbourPortals(FlowFieldAgent agent, NativeArray<float> portalHeights)

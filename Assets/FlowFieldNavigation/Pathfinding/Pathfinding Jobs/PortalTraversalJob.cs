@@ -36,7 +36,7 @@ namespace FlowFieldNavigation
 
         [ReadOnly] internal NativeList<int> SourcePortalIndexList;
         [ReadOnly] internal NativeList<int> DijkstraStartIndicies;
-        [ReadOnly] internal NativeList<int> NewReducedPortalIndicies;
+        [ReadOnly] internal NativeList<int> NewExploredPortalIndicies;
         int _targetSectorIndex1d;
         public void Execute()
         {
@@ -68,9 +68,9 @@ namespace FlowFieldNavigation
         }
         void SubmitPortalDataRecords()
         {
-            for(int i = 0; i < NewReducedPortalIndicies.Length; i++)
+            for(int i = 0; i < NewExploredPortalIndicies.Length; i++)
             {
-                int portalIndex = NewReducedPortalIndicies[i];
+                int portalIndex = NewExploredPortalIndicies[i];
                 PortalTraversalData portalData = PortalTraversalDataArray[portalIndex];
                 PortalTraversalDataRecord record = new PortalTraversalDataRecord()
                 {
@@ -151,7 +151,7 @@ namespace FlowFieldNavigation
                     int portalIndex = porPtrs[i].Index;
                     float portalDistance = porPtrs[i].Distance;
                     PortalTraversalData porData = portalTraversalDataArray[portalIndex];
-                    if (!porData.HasMark(PortalTraversalMark.Reduced) || porData.HasMark(PortalTraversalMark.DijstraExtracted)) { continue; }
+                    if (!porData.HasMark(PortalTraversalMark.DijkstraTraversable) || porData.HasMark(PortalTraversalMark.DijstraExtracted)) { continue; }
                     if (porData.HasMark(PortalTraversalMark.DijkstraTraversed))
                     {
                         float newGCost = gCost + portalDistance + 1;
@@ -173,7 +173,7 @@ namespace FlowFieldNavigation
                     int portalIndex = porPtrs[i].Index;
                     float portalDistance = porPtrs[i].Distance;
                     PortalTraversalData porData = portalTraversalDataArray[portalIndex];
-                    if (!porData.HasMark(PortalTraversalMark.Reduced) || porData.HasMark(PortalTraversalMark.DijstraExtracted)) { continue; }
+                    if (!porData.HasMark(PortalTraversalMark.DijkstraTraversable) || porData.HasMark(PortalTraversalMark.DijstraExtracted)) { continue; }
                     if (porData.HasMark(PortalTraversalMark.DijkstraTraversed))
                     {
                         float newGCost = gCost + portalDistance + 1;

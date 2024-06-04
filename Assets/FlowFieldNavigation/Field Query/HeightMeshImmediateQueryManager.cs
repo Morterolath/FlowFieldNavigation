@@ -14,7 +14,7 @@ namespace FlowFieldNavigation
             _navManager = navManager;
         }
 
-        internal float GetHeight(in float2 point)
+        internal float GetHeightBurst(in float2 point)
         {
             TriangleSpatialHashGrid triangleSpatialHashGrid = _navManager.FieldDataContainer.HeightMeshGenerator.GetTriangleSpatialHashGrid();
             NativeArray<float3> heightMeshVerticies = _navManager.FieldDataContainer.HeightMeshGenerator.Verticies.AsArray();

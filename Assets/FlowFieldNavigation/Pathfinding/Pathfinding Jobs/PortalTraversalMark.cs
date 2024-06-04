@@ -3,7 +3,7 @@
 namespace FlowFieldNavigation
 {
     [Flags]
-    internal enum PortalTraversalMark : byte
+    internal enum PortalTraversalMark : short
     {
         AStarTraversed = 1,
         AStarExtracted = 2,
@@ -12,7 +12,8 @@ namespace FlowFieldNavigation
         DijkstraPicked = 16,
         DijstraExtracted = 32,
         GoalNeighbour = 64,
-        Reduced = 128,
+        Explored = 128,
+        DijkstraTraversable = 256,
     }
 
 }

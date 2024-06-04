@@ -28,7 +28,7 @@ namespace FlowFieldNavigation
 
 			//Debug destination point
 			Vector2 destination = destinationData.Destination;
-			Vector3 destination3 = new Vector3(destination.x, _navigationManager.HeightMeshImmediateQueryManager.GetHeight(destination), destination.y);
+			Vector3 destination3 = new Vector3(destination.x, _navigationManager.HeightMeshImmediateQueryManager.GetHeightBurst(destination), destination.y);
 			Gizmos.color = Color.blue;
 			Gizmos.DrawSphere(destination3, 0.3f);
 

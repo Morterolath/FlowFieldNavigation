@@ -79,9 +79,9 @@ namespace FlowFieldNavigation
                     SectorStateTable = sectorStateTable,
                     DijkstraStartIndicies = portalTraversalData.DiskstraStartIndicies,
                     GoalTraversalDataList = portalTraversalData.GoalDataList,
-                    NewReducedNodeIndicies = portalTraversalData.NewReducedPortalIndicies,
+                    NewReducedNodeIndicies = portalTraversalData.NewExploredPortalIndicies,
                     PortalDataRecords = portalTraversalData.PortalDataRecords.AsArray(),
-                    NewPathUpdateSeedIndicies = portalTraversalData.NewPathUpdateSeedIndicies,
+                    NewExploredUpdateSeedIndicies = portalTraversalData.NewPathUpdateSeedIndicies,
                 };
                 JobHandle reductHandle = reductionJob.Schedule(dependency);
                 if (FlowFieldUtilities.DebugMode) { reductHandle.Complete(); }
@@ -112,7 +112,7 @@ namespace FlowFieldNavigation
                     PortalTraversalDataArray = porTravDataArray,
                     SectorStateTable = sectorStateTable,
                     SourcePortalIndexList = portalTraversalData.SourcePortalIndexList,
-                    NewReducedPortalIndicies = portalTraversalData.NewReducedPortalIndicies,
+                    NewExploredPortalIndicies = portalTraversalData.NewExploredPortalIndicies,
                     PortalDataRecords = portalTraversalData.PortalDataRecords,
                 };
                 JobHandle travHandle = traversalJob.Schedule(reductHandle);
