@@ -42,6 +42,8 @@ namespace FlowFieldNavigation
                 NativeArray<OverlappingDirection> sectorOverlappingDirectionTable = _pathContainer.SectorOverlappingDirectionTableList[pathIndex];
                 SectorBitArray sectorBitArray = _pathContainer.PathSectorBitArrays[pathIndex];
                 NativeArray<int> sectorToFlowStartTable = _pathContainer.SectorToFlowStartTables[pathIndex];
+                NativeHashMap<int,int> goalNeighborIndexToGoalIndexMap = _pathContainer.PathGoalNeighbourIndexToGoalIndexMaps[pathIndex];
+                NativeList<int> goalTraversalDataFieldIndexList = _pathContainer.PathGoalTraversalDataFieldIndexLists[pathIndex];
                 int2 destinationIndex = FlowFieldUtilities.PosTo2D(destinationData.Destination, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
                 CostField pickedCostField = _navigationManager.FieldDataContainer.GetCostFieldWithOffset(destinationData.Offset);
                 FieldGraph pickedFieldGraph = _navigationManager.FieldDataContainer.GetFieldGraphWithOffset(destinationData.Offset);
@@ -54,6 +56,8 @@ namespace FlowFieldNavigation
                 //Graph Reduction
                 PortalReductionJob reductionJob = new PortalReductionJob()
                 {
+                    GoalPosition = destinationData.Destination,
+                    GoalRange = 0f,
                     TileSize = FlowFieldUtilities.TileSize,
                     GoalIndex = destinationIndex,
                     FieldColAmount = FlowFieldUtilities.FieldColAmount,
@@ -79,9 +83,11 @@ namespace FlowFieldNavigation
                     SectorStateTable = sectorStateTable,
                     DijkstraStartIndicies = portalTraversalData.DiskstraStartIndicies,
                     GoalTraversalDataList = portalTraversalData.GoalDataList,
-                    NewReducedNodeIndicies = portalTraversalData.NewExploredPortalIndicies,
+                    NewExploredPortalIndicies = portalTraversalData.NewExploredPortalIndicies,
                     PortalDataRecords = portalTraversalData.PortalDataRecords.AsArray(),
                     NewExploredUpdateSeedIndicies = portalTraversalData.NewPathUpdateSeedIndicies,
+                    GoalNeighborIndexToGoalIndexMap = goalNeighborIndexToGoalIndexMap,
+                    GoalTraversalDataFieldIndexList = goalTraversalDataFieldIndexList,
                 };
                 JobHandle reductHandle = reductionJob.Schedule(dependency);
                 if (FlowFieldUtilities.DebugMode) { reductHandle.Complete(); }
@@ -114,6 +120,8 @@ namespace FlowFieldNavigation
                     SourcePortalIndexList = portalTraversalData.SourcePortalIndexList,
                     NewExploredPortalIndicies = portalTraversalData.NewExploredPortalIndicies,
                     PortalDataRecords = portalTraversalData.PortalDataRecords,
+                    GoalTraversalDataFieldIndexList = goalTraversalDataFieldIndexList,
+                    GoalNeighborIndexToGoalIndexMap = goalNeighborIndexToGoalIndexMap,
                 };
                 JobHandle travHandle = traversalJob.Schedule(reductHandle);
                 _porTravDataProvider.IncerimentPointer(travHandle);

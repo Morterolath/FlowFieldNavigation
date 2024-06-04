@@ -8,6 +8,7 @@ namespace FlowFieldNavigation
 {
     internal class PathDataContainer
     {
+        internal List<NativeHashMap<int, int>> PathGoalNeighbourIndexToGoalIndexMaps;
         internal NativeList<float> PathRanges;
         internal NativeList<float> PathDesiredRanges;
         internal NativeList<FlowData> ExposedFlowData;
@@ -29,6 +30,7 @@ namespace FlowFieldNavigation
         internal NativeList<int> PathSubscriberCounts;
         internal List<NativeArray<OverlappingDirection>> SectorOverlappingDirectionTableList;
         internal NativeList<int> RemovedExposedFlowAndLosIndicies;
+        internal List<NativeList<int>> PathGoalTraversalDataFieldIndexLists;
         Stack<int> _removedPathIndicies;
 
         FieldDataContainer _fieldProducer;
@@ -63,6 +65,8 @@ namespace FlowFieldNavigation
             ExposedLosData = new NativeList<bool>(Allocator.Persistent);
             PathRanges = new NativeList<float>(Allocator.Persistent);
             PathDesiredRanges = new NativeList<float>(Allocator.Persistent);
+            PathGoalNeighbourIndexToGoalIndexMaps = new List<NativeHashMap<int, int>>();
+            PathGoalTraversalDataFieldIndexLists = new List<NativeList<int>>();
         }
         internal void DisposeAll()
         {
@@ -110,6 +114,8 @@ namespace FlowFieldNavigation
                     internalData.FlowFieldCalculationBuffer.Dispose();
                     sectorToFlowStartTable.Dispose();
                     portalTraversalData.NewPathUpdateSeedIndicies.Dispose();
+                    PathGoalNeighbourIndexToGoalIndexMaps[i].Dispose();
+                    PathGoalTraversalDataFieldIndexLists[i].Dispose();
                     ExposedPathStateList[i] = PathState.Removed;
                     _removedPathIndicies.Push(i);
                     PreallocationPack preallocations = new PreallocationPack()
@@ -254,6 +260,8 @@ namespace FlowFieldNavigation
                 SectorToFlowStartTables.Add(new NativeArray<int>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent));
                 PathRanges.Add(request.Range);
                 PathDesiredRanges.Add(request.Range);
+                PathGoalNeighbourIndexToGoalIndexMaps.Add(new NativeHashMap<int, int>(0, Allocator.Persistent));
+                PathGoalTraversalDataFieldIndexLists.Add(new NativeList<int>(Allocator.Persistent));
             }
             else
             {
@@ -269,6 +277,8 @@ namespace FlowFieldNavigation
                 SectorToFlowStartTables[pathIndex] = new NativeArray<int>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent);
                 PathRanges[pathIndex] = request.Range;
                 PathDesiredRanges[pathIndex] = request.Range;
+                PathGoalNeighbourIndexToGoalIndexMaps[pathIndex] = new NativeHashMap<int, int>(0, Allocator.Persistent);
+                PathGoalTraversalDataFieldIndexLists[pathIndex] = new NativeList<int>(Allocator.Persistent);
             }
 
             return pathIndex;

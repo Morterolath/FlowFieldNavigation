@@ -33,7 +33,8 @@ namespace FlowFieldNavigation
         [ReadOnly] internal NativeArray<PortalNode> PortalNodes;
         [ReadOnly] internal NativeArray<PortalToPortal> PorPtrs;
         [ReadOnly] internal NativeReference<int> NewPickedSectorStartIndex;
-
+        [ReadOnly] internal NativeHashMap<int, int> GoalNeighborIndexToGoalIndexMap;
+        [ReadOnly] internal NativeList<int> GoalTraversalDataFieldIndexList;
         [ReadOnly] internal NativeList<int> SourcePortalIndexList;
         [ReadOnly] internal NativeList<int> DijkstraStartIndicies;
         [ReadOnly] internal NativeList<int> NewExploredPortalIndicies;
@@ -310,10 +311,12 @@ namespace FlowFieldNavigation
                 }
                 else if (curPortalTargetNeighbour)
                 {
+                    int goalPortalIndex = GoalNeighborIndexToGoalIndexMap[curPortalIndex];
+                    int goalPortalFieldIndex = GoalTraversalDataFieldIndexList[goalPortalIndex];
                     ActivePortal targetActivePortal = new ActivePortal()
                     {
-                        FieldIndex1 = FlowFieldUtilities.To1D(Target, FieldColAmount),
-                        FieldIndex2 = FlowFieldUtilities.To1D(Target, FieldColAmount),
+                        FieldIndex1 = goalPortalFieldIndex,
+                        FieldIndex2 = goalPortalFieldIndex,
                         Distance = 0,
                     };
                     PortalSequence.Add(targetActivePortal);
