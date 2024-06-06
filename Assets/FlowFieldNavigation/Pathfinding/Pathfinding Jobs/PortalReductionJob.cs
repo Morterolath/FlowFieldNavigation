@@ -45,16 +45,11 @@ namespace FlowFieldNavigation
         internal NativeList<int> DijkstraStartIndicies;
         internal NativeList<int> NewExploredPortalIndicies;
         internal NativeList<int> NewExploredUpdateSeedIndicies;
-
-        int _targetSectorIndex1d;
         public void Execute()
         {
             DijkstraStartIndicies.Clear();
             SourcePortalIndexList.Clear();
             NewExploredPortalIndicies.Clear();
-            //TARGET DATA
-            int2 targetSectorIndex2d = new int2(GoalIndex.x / SectorColAmount, GoalIndex.y / SectorColAmount);
-            _targetSectorIndex1d = targetSectorIndex2d.y * SectorMatrixColAmount + targetSectorIndex2d.x;
 
             CopyPortalDataRecords();
             SingleFloatUnsafeHeap<PortalTraversalIndex> walkerHeap = new SingleFloatUnsafeHeap<PortalTraversalIndex>(10, Allocator.Temp);
@@ -413,36 +408,30 @@ namespace FlowFieldNavigation
             int sector1 = FlowFieldUtilities.GetSector1D(portalFieldIndex1, SectorColAmount, SectorMatrixColAmount);
             int sector2 = FlowFieldUtilities.GetSector1D(portalFieldIndex2, SectorColAmount, SectorMatrixColAmount);
             NativeArray<float> targetSectorCostsGrid = new NativeArray<float>(SectorTileAmount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-            TrySector(sector1, targetSectorCostsGrid, goalNeighbourPortalIndicies);
-            TrySector(sector2, targetSectorCostsGrid, goalNeighbourPortalIndicies);
-            curTravData = PortalTraversalDataArray[curPortalIndex];
-            int goalIndex1d = FlowFieldUtilities.To1D(GoalIndex, FieldColAmount);
-            NewExploredUpdateSeedIndicies.Add(goalIndex1d);
+            bool succesfull1 = TrySector(sector1, targetSectorCostsGrid, goalNeighbourPortalIndicies);
+            bool succesfull2 = TrySector(sector2, targetSectorCostsGrid, goalNeighbourPortalIndicies);
+            if(succesfull1 || succesfull2)
+            {
+                curTravData = PortalTraversalDataArray[curPortalIndex];
+                int goalIndex1d = FlowFieldUtilities.To1D(GoalIndex, FieldColAmount);
+                NewExploredUpdateSeedIndicies.Add(goalIndex1d);
+            }
         }
-        void TrySector(int sector1d, NativeArray<float> tileCosts, NativeList<int> targetNeighbourPortalIndicies)
+        bool TrySector(int sector1d, NativeArray<float> tileCosts, NativeList<int> targetNeighbourPortalIndicies)
         {
-            //Does sector have any index close enough to goal?
-            //No: end
-            //Is sector in 'already considered sector map':
-            //Yes: end
-            //Traverse all indicies, set the ones 'walkable' and 'close enough' as starting point for fast marching
-            //Start fast marching from those indicies
-            //For each portal on sector, look for the ones with valid cost. These portals are 'goal neighbour'.
-            //Mark them. If already marked and cost you just found is smaller, update them.
-            //Add their goals to the 'goalTraversalDataList'. Duplicates are no problem, but no duplicates is more meaningful.
-            //Add the sector to the 'already considered sector map'
             if (!SectorHasTilesCloseEnoughToGoal(sector1d, out int bits))
             {
-                return;
+                return false;
             }
             if (AlreadyConsideredGoalSectorIndicies.Contains(sector1d))
             {
-                return;
+                return false;
             }
             AlreadyConsideredGoalSectorIndicies.Add(sector1d);
             RunFMOnSecotor(sector1d, tileCosts);
             int2 sector2d = FlowFieldUtilities.To2D(sector1d, SectorMatrixColAmount);
             SetTargetNeighbourPortalDataAndAddToList(targetNeighbourPortalIndicies, tileCosts, sector2d);
+            return true;
         }
 
         void RunFMOnSecotor(int sector1d, NativeArray<float> targetSectorCostsGrid)

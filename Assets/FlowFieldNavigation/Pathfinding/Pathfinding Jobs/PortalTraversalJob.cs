@@ -38,13 +38,8 @@ namespace FlowFieldNavigation
         [ReadOnly] internal NativeList<int> SourcePortalIndexList;
         [ReadOnly] internal NativeList<int> DijkstraStartIndicies;
         [ReadOnly] internal NativeList<int> NewExploredPortalIndicies;
-        int _targetSectorIndex1d;
         public void Execute()
         {
-            //TARGET DATA
-            int2 targetSectorIndex2d = new int2(Target.x / SectorColAmount, Target.y / SectorColAmount);
-            _targetSectorIndex1d = targetSectorIndex2d.y * SectorMatrixColAmount + targetSectorIndex2d.x;
-
             RunDijkstra();
             NativeArray<int> sourcePortalsAsArray = SourcePortalIndexList.AsArray();
             for (int i = 0; i < sourcePortalsAsArray.Length; i++)
@@ -229,11 +224,11 @@ namespace FlowFieldNavigation
         }
         void AddTargetSector()
         {
-            int sectorTileAmount = SectorColAmount * SectorColAmount;
-            if ((SectorStateTable[_targetSectorIndex1d] & PathSectorState.Included) != PathSectorState.Included)
+            int targetSector = FlowFieldUtilities.GetSector1D(Target, SectorColAmount, SectorMatrixColAmount);
+            if ((SectorStateTable[targetSector] & PathSectorState.Included) != PathSectorState.Included)
             {
-                PickedSectorIndicies.Add(_targetSectorIndex1d);
-                SectorStateTable[_targetSectorIndex1d] |= PathSectorState.Included;
+                PickedSectorIndicies.Add(targetSector);
+                SectorStateTable[targetSector] |= PathSectorState.Included;
             }
             
         }
