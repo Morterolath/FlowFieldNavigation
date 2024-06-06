@@ -328,14 +328,10 @@ namespace FlowFieldNavigation
             int sector2 = FlowFieldUtilities.GetSector1D(portalFieldIndex2, SectorColAmount, SectorMatrixColAmount);
             if((sector1 == _targetSectorIndex1d || sector2 == _targetSectorIndex1d) && GoalTraversalDataList.Length == 0)
             {
+                int2 goalSector2d = FlowFieldUtilities.To2D(_targetSectorIndex1d, SectorMatrixColAmount);
                 NativeArray<float> targetSectorCostsGrid = new NativeArray<float>(SectorTileAmount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
                 SetTargetSectorCosts(targetSectorCostsGrid);
-                PortalTraversalData destinationData = new PortalTraversalData();
-                destinationData.Reset();
-                destinationData.DistanceFromTarget = 0;
-                GoalTraversalDataList.Add(destinationData);
-                GoalTraversalDataFieldIndexList.Add(FlowFieldUtilities.To1D(GoalIndex, FieldColAmount));
-                SetTargetNeighbourPortalDataAndAddToList(goalNeighbourPortalIndicies, targetSectorCostsGrid);
+                SetTargetNeighbourPortalDataAndAddToList(goalNeighbourPortalIndicies, targetSectorCostsGrid, goalSector2d);
                 curTravData = PortalTraversalDataArray[curPortalIndex];
                 int goalIndex1d = FlowFieldUtilities.To1D(GoalIndex, FieldColAmount);
                 NewExploredUpdateSeedIndicies.Add(goalIndex1d);
@@ -383,9 +379,10 @@ namespace FlowFieldNavigation
                 }
             }
         }
-        void SetTargetNeighbourPortalDataAndAddToList(NativeList<int> targetNeighbourPortalIndicies, NativeArray<float> targetSectorCostGrid)
+        void SetTargetNeighbourPortalDataAndAddToList(NativeList<int> targetNeighbourPortalIndicies, NativeArray<float> targetSectorCostGrid, int2 sectorIndex)
         {
-            SectorNode sectorNode = SectorNodes[_targetSectorIndex1d];
+            int sectorIndex1d = FlowFieldUtilities.To1D(sectorIndex, SectorMatrixColAmount);
+            SectorNode sectorNode = SectorNodes[sectorIndex1d];
             int winPtr = sectorNode.SecToWinPtr;
             int winCnt = sectorNode.SecToWinCnt;
             for (int i = 0; i < winCnt; i++)
@@ -396,19 +393,31 @@ namespace FlowFieldNavigation
                 for (int j = porPtr; j < porCnt + porPtr; j++)
                 {
                     int portalNodeIndex = j;
-                    int portalLocalIndexAtSector = FlowFieldUtilities.GetLocal1dInSector(PortalNodes[portalNodeIndex], _targetSectorIndex1d, SectorMatrixColAmount, SectorColAmount);
-                    float integratedCost = targetSectorCostGrid[portalLocalIndexAtSector];
-                    if (integratedCost == float.MaxValue) { continue; }
+                    PortalNode portalNode = PortalNodes[portalNodeIndex];
+                    int2 generalIndexAtSector = FlowFieldUtilities.GetIndexAtSector(portalNode.Portal1.Index, portalNode.Portal2.Index, sectorIndex, SectorColAmount);
+                    int portalLocalIndexAtSector = FlowFieldUtilities.GetLocal1D(generalIndexAtSector, SectorColAmount);
+                    float distanceToGoal = targetSectorCostGrid[portalLocalIndexAtSector];
+                    if (distanceToGoal == float.MaxValue) { continue; }
                     PortalTraversalData portalData = PortalTraversalDataArray[portalNodeIndex];
-                    portalData.DistanceFromTarget = integratedCost;
-                    portalData.Mark |= PortalTraversalMark.GoalNeighbour;
-                    if(!portalData.HasMark(PortalTraversalMark.Explored))
+                    bool isAlreadyGoalNeighbor = portalData.HasMark(PortalTraversalMark.GoalNeighbour);
+                    bool isNewDistanceLess = distanceToGoal < portalData.DistanceFromTarget;
+                    if(!isAlreadyGoalNeighbor || (isAlreadyGoalNeighbor && isNewDistanceLess))
+                    {
+                        PortalTraversalData destinationData = new PortalTraversalData();
+                        destinationData.Reset();
+                        destinationData.DistanceFromTarget = 0;
+                        GoalTraversalDataList.Add(destinationData);
+                        GoalTraversalDataFieldIndexList.Add(FlowFieldUtilities.To1D(generalIndexAtSector, FieldColAmount));
+                        GoalNeighborIndexToGoalIndexMap.Add(portalNodeIndex, GoalTraversalDataList.Length - 1);
+                        portalData.DistanceFromTarget = distanceToGoal;
+                        portalData.Mark |= PortalTraversalMark.GoalNeighbour;
+                    }
+                    if (!portalData.HasMark(PortalTraversalMark.Explored))
                     {
                         portalData.Mark |= PortalTraversalMark.Explored;
                         NewExploredPortalIndicies.Add(portalNodeIndex);
                     }
                     PortalTraversalDataArray[portalNodeIndex] = portalData;
-                    GoalNeighborIndexToGoalIndexMap.Add(portalNodeIndex, 0);
                     targetNeighbourPortalIndicies.Add(portalNodeIndex);
                 }
             }

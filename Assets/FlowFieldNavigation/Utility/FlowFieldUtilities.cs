@@ -188,6 +188,14 @@ namespace FlowFieldNavigation
 
             return local2d.y * sectorColAmount + local2d.x;
         }
+        internal static int2 GetIndexAtSector(int2 generalIndex1, int2 generalIndex2, int2 sectorIndex, int sectorColAmount)
+        {
+            int2 sec1 = GetSector2D(generalIndex1, sectorColAmount);
+            int2 sec2 = GetSector2D(generalIndex2, sectorColAmount);
+            int2 secToReturn = math.select(0,generalIndex1, sectorIndex.Equals(sec1));
+            secToReturn = math.select(secToReturn, generalIndex2, sectorIndex.Equals(sec2));
+            return secToReturn;
+        }
         internal static int GetCommonSector(PortalNode node1, PortalNode node2, int sectorColAmount, int sectorMatrixColAmount)
         {
             int2 n1p1index2d = new int2(node1.Portal1.Index.C, node1.Portal1.Index.R);
