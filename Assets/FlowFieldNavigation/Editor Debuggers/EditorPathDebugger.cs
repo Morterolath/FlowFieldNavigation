@@ -245,6 +245,11 @@ namespace FlowFieldNavigation
                     Gizmos.color = Color.black;
                     Gizmos.DrawSphere(portalPos + new Vector3(0.35f, 0, 0), 0.25f);
                 }
+                if ((record.Mark & PortalTraversalMark.GoalNeighbour) == PortalTraversalMark.GoalNeighbour)
+                {
+                    Gizmos.color = Color.cyan;
+                    Gizmos.DrawSphere(portalPos + new Vector3(0,0,0.35f), 0.25f);
+                }
                 Handles.Label(labelPos, record.PortalIndex + " : " + record.DistanceFromTarget.ToString());
             }
         }

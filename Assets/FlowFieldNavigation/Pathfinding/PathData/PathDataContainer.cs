@@ -31,6 +31,7 @@ namespace FlowFieldNavigation
         internal List<NativeArray<OverlappingDirection>> SectorOverlappingDirectionTableList;
         internal NativeList<int> RemovedExposedFlowAndLosIndicies;
         internal List<NativeList<int>> PathGoalTraversalDataFieldIndexLists;
+        internal List<NativeHashSet<int>> PathAlreadyConsideredSectorIndexMaps;
         Stack<int> _removedPathIndicies;
 
         FieldDataContainer _fieldProducer;
@@ -67,6 +68,7 @@ namespace FlowFieldNavigation
             PathDesiredRanges = new NativeList<float>(Allocator.Persistent);
             PathGoalNeighbourIndexToGoalIndexMaps = new List<NativeHashMap<int, int>>();
             PathGoalTraversalDataFieldIndexLists = new List<NativeList<int>>();
+            PathAlreadyConsideredSectorIndexMaps = new List<NativeHashSet<int>>();
         }
         internal void DisposeAll()
         {
@@ -117,6 +119,7 @@ namespace FlowFieldNavigation
                     PathGoalNeighbourIndexToGoalIndexMaps[i].Dispose();
                     PathGoalTraversalDataFieldIndexLists[i].Dispose();
                     ExposedPathStateList[i] = PathState.Removed;
+                    PathAlreadyConsideredSectorIndexMaps[i].Dispose();
                     _removedPathIndicies.Push(i);
                     PreallocationPack preallocations = new PreallocationPack()
                     {
@@ -262,6 +265,7 @@ namespace FlowFieldNavigation
                 PathDesiredRanges.Add(request.Range);
                 PathGoalNeighbourIndexToGoalIndexMaps.Add(new NativeHashMap<int, int>(0, Allocator.Persistent));
                 PathGoalTraversalDataFieldIndexLists.Add(new NativeList<int>(Allocator.Persistent));
+                PathAlreadyConsideredSectorIndexMaps.Add(new NativeHashSet<int>(0, Allocator.Persistent));
             }
             else
             {
@@ -279,6 +283,7 @@ namespace FlowFieldNavigation
                 PathDesiredRanges[pathIndex] = request.Range;
                 PathGoalNeighbourIndexToGoalIndexMaps[pathIndex] = new NativeHashMap<int, int>(0, Allocator.Persistent);
                 PathGoalTraversalDataFieldIndexLists[pathIndex] = new NativeList<int>(Allocator.Persistent);
+                PathAlreadyConsideredSectorIndexMaps[pathIndex] = new NativeHashSet<int>(0, Allocator.Persistent);
             }
 
             return pathIndex;

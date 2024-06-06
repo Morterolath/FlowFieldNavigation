@@ -44,6 +44,7 @@ namespace FlowFieldNavigation
                 NativeArray<int> sectorToFlowStartTable = _pathContainer.SectorToFlowStartTables[pathIndex];
                 NativeHashMap<int,int> goalNeighborIndexToGoalIndexMap = _pathContainer.PathGoalNeighbourIndexToGoalIndexMaps[pathIndex];
                 NativeList<int> goalTraversalDataFieldIndexList = _pathContainer.PathGoalTraversalDataFieldIndexLists[pathIndex];
+                NativeHashSet<int> alreadyConsideredGoalSectorIndexMap = _pathContainer.PathAlreadyConsideredSectorIndexMaps[pathIndex];
                 int2 destinationIndex = FlowFieldUtilities.PosTo2D(destinationData.Destination, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
                 CostField pickedCostField = _navigationManager.FieldDataContainer.GetCostFieldWithOffset(destinationData.Offset);
                 FieldGraph pickedFieldGraph = _navigationManager.FieldDataContainer.GetFieldGraphWithOffset(destinationData.Offset);
@@ -88,6 +89,7 @@ namespace FlowFieldNavigation
                     NewExploredUpdateSeedIndicies = portalTraversalData.NewPathUpdateSeedIndicies,
                     GoalNeighborIndexToGoalIndexMap = goalNeighborIndexToGoalIndexMap,
                     GoalTraversalDataFieldIndexList = goalTraversalDataFieldIndexList,
+                    AlreadyConsideredGoalSectorIndicies = alreadyConsideredGoalSectorIndexMap,
                 };
                 JobHandle reductHandle = reductionJob.Schedule(dependency);
                 if (FlowFieldUtilities.DebugMode) { reductHandle.Complete(); }

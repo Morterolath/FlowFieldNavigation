@@ -28,7 +28,7 @@ namespace FlowFieldNavigation
         internal UnsafeList<PathSectorState> SectorStateTable;
         internal NativeList<int> PickedToSector;
         internal NativeHashMap<int, int> GoalNeighborIndexToGoalIndexMap;
-
+        internal NativeHashSet<int> AlreadyConsideredGoalSectorIndicies;
         [ReadOnly] internal NativeSlice<float2> SourcePositions;
         [ReadOnly] internal NativeArray<SectorNode> SectorNodes;
         [ReadOnly] internal NativeArray<int> SecToWinPtrs;
@@ -322,21 +322,6 @@ namespace FlowFieldNavigation
             }
             return int.MaxValue;
         }
-        void SubmitIfGoalSector(ref PortalTraversalData curTravData, int curPortalIndex, int2 portalFieldIndex1, int2 portalFieldIndex2, NativeList<int> goalNeighbourPortalIndicies)
-        {
-            int sector1 = FlowFieldUtilities.GetSector1D(portalFieldIndex1, SectorColAmount, SectorMatrixColAmount);
-            int sector2 = FlowFieldUtilities.GetSector1D(portalFieldIndex2, SectorColAmount, SectorMatrixColAmount);
-            if((sector1 == _targetSectorIndex1d || sector2 == _targetSectorIndex1d) && GoalTraversalDataList.Length == 0)
-            {
-                int2 goalSector2d = FlowFieldUtilities.To2D(_targetSectorIndex1d, SectorMatrixColAmount);
-                NativeArray<float> targetSectorCostsGrid = new NativeArray<float>(SectorTileAmount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-                SetTargetSectorCosts(targetSectorCostsGrid);
-                SetTargetNeighbourPortalDataAndAddToList(goalNeighbourPortalIndicies, targetSectorCostsGrid, goalSector2d);
-                curTravData = PortalTraversalDataArray[curPortalIndex];
-                int goalIndex1d = FlowFieldUtilities.To1D(GoalIndex, FieldColAmount);
-                NewExploredUpdateSeedIndicies.Add(goalIndex1d);
-            }
-        }
         void SetSourcePortalIndicies()
         {
             int targetIsland = GetIsland(GoalIndex);
@@ -422,26 +407,85 @@ namespace FlowFieldNavigation
                 }
             }
         }
-        void SetTargetSectorCosts(NativeArray<float> targetSectorCostsGrid)
+
+        void SubmitIfGoalSector(ref PortalTraversalData curTravData, int curPortalIndex, int2 portalFieldIndex1, int2 portalFieldIndex2, NativeList<int> goalNeighbourPortalIndicies)
+        {
+            int sector1 = FlowFieldUtilities.GetSector1D(portalFieldIndex1, SectorColAmount, SectorMatrixColAmount);
+            int sector2 = FlowFieldUtilities.GetSector1D(portalFieldIndex2, SectorColAmount, SectorMatrixColAmount);
+            NativeArray<float> targetSectorCostsGrid = new NativeArray<float>(SectorTileAmount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+            TrySector(sector1, targetSectorCostsGrid, goalNeighbourPortalIndicies);
+            TrySector(sector2, targetSectorCostsGrid, goalNeighbourPortalIndicies);
+            curTravData = PortalTraversalDataArray[curPortalIndex];
+            int goalIndex1d = FlowFieldUtilities.To1D(GoalIndex, FieldColAmount);
+            NewExploredUpdateSeedIndicies.Add(goalIndex1d);
+        }
+        void TrySector(int sector1d, NativeArray<float> tileCosts, NativeList<int> targetNeighbourPortalIndicies)
+        {
+            //Does sector have any index close enough to goal?
+            //No: end
+            //Is sector in 'already considered sector map':
+            //Yes: end
+            //Traverse all indicies, set the ones 'walkable' and 'close enough' as starting point for fast marching
+            //Start fast marching from those indicies
+            //For each portal on sector, look for the ones with valid cost. These portals are 'goal neighbour'.
+            //Mark them. If already marked and cost you just found is smaller, update them.
+            //Add their goals to the 'goalTraversalDataList'. Duplicates are no problem, but no duplicates is more meaningful.
+            //Add the sector to the 'already considered sector map'
+            if (!SectorHasTilesCloseEnoughToGoal(sector1d, out int bits))
+            {
+                return;
+            }
+            if (AlreadyConsideredGoalSectorIndicies.Contains(sector1d))
+            {
+                return;
+            }
+            AlreadyConsideredGoalSectorIndicies.Add(sector1d);
+            RunFMOnSecotor(sector1d, tileCosts);
+            int2 sector2d = FlowFieldUtilities.To2D(sector1d, SectorMatrixColAmount);
+            SetTargetNeighbourPortalDataAndAddToList(targetNeighbourPortalIndicies, tileCosts, sector2d);
+        }
+
+        void RunFMOnSecotor(int sector1d, NativeArray<float> targetSectorCostsGrid)
         {
             int sectorColAmount = SectorColAmount;
             int sectorTileAmount = SectorTileAmount;
-            NativeSlice<byte> costs = new NativeSlice<byte>(Costs, _targetSectorIndex1d * SectorTileAmount, SectorTileAmount);
+            NativeSlice<byte> costs = new NativeSlice<byte>(Costs, sector1d * SectorTileAmount, SectorTileAmount);
             NativeBitArray isBlocked = new NativeBitArray(SectorTileAmount, Allocator.Temp);
-            for(int i = 0; i < targetSectorCostsGrid.Length; i++)
-            {
-                targetSectorCostsGrid[i] = float.MaxValue;
-                isBlocked.Set(i, costs[i] == byte.MaxValue);
-            }
             NativeQueue<int> fastMarchingQueue = new NativeQueue<int>(Allocator.Temp);
+            NativeList<int> fastMarchinStartLocalIndicies = new NativeList<int>(Allocator.Temp);
             int4 directions_N_E_S_W;
             int4 directions_NE_SE_SW_NW;
             bool4 isBlocked_N_E_S_W;
-            int targetLocal1d = FlowFieldUtilities.GetLocal1D(GoalIndex, SectorColAmount);
-            targetSectorCostsGrid[targetLocal1d] = 0;
-            isBlocked.Set(targetLocal1d, true);
-            SetNeighbourData(targetLocal1d);
-            EnqueueNeighbours();
+
+            //Initialize grid
+            for (int i = 0; i < targetSectorCostsGrid.Length; i++)
+            {
+                int2 tileGeneral2d = FlowFieldUtilities.GetGeneral2d(i, sector1d, SectorMatrixColAmount, sectorColAmount);
+                float2 tileCenterPos = FlowFieldUtilities.IndexToPos(tileGeneral2d, TileSize, FieldGridStartPos);
+                bool indexIsCloseEnough = math.distance(tileCenterPos, GoalPosition) < GoalRange || tileGeneral2d.Equals(GoalIndex);
+                bool tileIsUnwalkable = costs[i] == byte.MaxValue;
+                if (indexIsCloseEnough && !tileIsUnwalkable)
+                {
+                    targetSectorCostsGrid[i] = 0;
+                    fastMarchinStartLocalIndicies.Add(i);
+                    isBlocked.Set(i, true);
+                }
+                else
+                {
+                    targetSectorCostsGrid[i] = float.MaxValue;
+                    isBlocked.Set(i, tileIsUnwalkable);
+                }
+            }
+
+            //Start from start local indicies
+            for (int i = 0; i < fastMarchinStartLocalIndicies.Length; i++)
+            {
+                int startIndex = fastMarchinStartLocalIndicies[i];
+                SetNeighbourData(startIndex);
+                EnqueueNeighbours();
+            }
+
+            //Remaining
             while (!fastMarchingQueue.IsEmpty())
             {
                 int curIndex = fastMarchingQueue.Dequeue();
@@ -536,6 +580,62 @@ namespace FlowFieldNavigation
                     fastMarchingQueue.Enqueue(directions_N_E_S_W.w);
                     isBlocked.Set(directions_N_E_S_W.w, true);
                 }
+            }
+
+        }
+        bool SectorHasTilesCloseEnoughToGoal(int sector1d, out int bits)
+        {
+            const int biggerThanMinY    = 0b_1000;
+            const int biggerThanMinX    = 0b_0100;
+            const int smallerThanMaxY   = 0b_0010;
+            const int smallerThanMaxX   = 0b_0001;
+            const int topLeft   = biggerThanMinY | smallerThanMaxX;
+            const int topmid    = biggerThanMinY | biggerThanMinX  | smallerThanMaxX;
+            const int topright  = biggerThanMinY | biggerThanMinX;
+            const int midleft   = biggerThanMinY | smallerThanMaxY | smallerThanMaxX;
+            const int midmid    = biggerThanMinY | biggerThanMinX  | smallerThanMaxY | smallerThanMaxX;
+            const int midright  = biggerThanMinY | biggerThanMinX  | smallerThanMaxY;
+            const int botleft   = smallerThanMaxY| smallerThanMaxX;
+            const int botmid    = biggerThanMinX | smallerThanMaxY | smallerThanMaxX;
+            const int botright  = biggerThanMinX | smallerThanMaxY;
+
+            float sectorSize = SectorColAmount * TileSize;
+            float2 sectorMin = FlowFieldUtilities.GetSectorStartPos(sector1d, SectorMatrixColAmount, SectorColAmount, TileSize, FieldGridStartPos);
+            float2 sectorMax = sectorMin + sectorSize;
+            bool2 goalSmallerThanSectorMaxPos = GoalPosition <= sectorMax;
+            bool2 goalBiggerThanSectorMinPos = GoalPosition >= sectorMin;
+            int resultBits = math.select(0, smallerThanMaxY, goalSmallerThanSectorMaxPos.y);
+            resultBits |= math.select(0, biggerThanMinY, goalBiggerThanSectorMinPos.y);
+            resultBits |= math.select(0, smallerThanMaxX, goalSmallerThanSectorMaxPos.x);
+            resultBits |= math.select(0, biggerThanMinX, goalBiggerThanSectorMinPos.x);
+
+            float2 sectorBotLeft = sectorMin;
+            float2 sectorTopLeft = sectorMin;
+            sectorTopLeft.y += sectorSize;
+            float2 sectorTopRight = sectorMax;
+            float2 sectorBotRight = sectorMax;
+            sectorBotRight.y -= sectorSize;
+            bits = resultBits;
+            switch (resultBits)
+            {
+                case topLeft:
+                    return math.distance(sectorTopLeft, GoalPosition) <= GoalRange;
+                case topmid:
+                    return (GoalPosition.y - sectorMax.y) <= GoalRange;
+                case topright:
+                    return math.distance(sectorTopRight, GoalPosition) <= GoalRange;
+                case midleft:
+                    return (sectorMin.x - GoalPosition.x) <= GoalRange;
+                case midright:
+                    return (GoalPosition.x - sectorMax.x) <= GoalRange;
+                case botleft:
+                    return math.distance(sectorBotLeft, GoalPosition) <= GoalRange;
+                case botmid:
+                    return (sectorMin.y - GoalPosition.y) <= GoalRange;
+                case botright:
+                    return math.distance(sectorBotRight, GoalPosition) <= GoalRange;
+                default:
+                    return true;
             }
         }
     }
