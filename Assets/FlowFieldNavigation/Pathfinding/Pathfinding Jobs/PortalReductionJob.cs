@@ -21,7 +21,6 @@ namespace FlowFieldNavigation
         internal int SectorMatrixColAmount;
         internal int SectorTileAmount;
         internal float2 FieldGridStartPos;
-
         internal NativeArray<PortalTraversalData> PortalTraversalDataArray;
         internal NativeList<PortalTraversalData> GoalTraversalDataList;
         internal NativeList<int> GoalTraversalDataFieldIndexList;
@@ -40,7 +39,6 @@ namespace FlowFieldNavigation
         [ReadOnly] internal NativeArray<SectorDirectionData> LocalDirections;
         [ReadOnly] internal NativeArray<UnsafeList<int>> IslandFields;
         [ReadOnly] internal NativeArray<PortalTraversalDataRecord> PortalDataRecords;
-
         internal NativeList<int> SourcePortalIndexList;
         internal NativeList<int> DijkstraStartIndicies;
         internal NativeList<int> NewExploredPortalIndicies;
@@ -57,9 +55,10 @@ namespace FlowFieldNavigation
             NativeArray<int> sourcePortalsAsArray = SourcePortalIndexList.AsArray();
             NativeList<int> aStarTraversedIndicies = new NativeList<int>(Allocator.Temp);
             NativeList<int> targetNeighbourPortalIndicies = new NativeList<int>(Allocator.Temp);
+            NativeArray<float> goalSectorCostGrid = new NativeArray<float>(SectorTileAmount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
             for (int i = 0; i < sourcePortalsAsArray.Length; i++)
             {
-                PortalTraversalIndex stoppedIndex = RunReductionAStar(sourcePortalsAsArray[i], walkerHeap, aStarTraversedIndicies, targetNeighbourPortalIndicies);
+                PortalTraversalIndex stoppedIndex = RunReductionAStar(sourcePortalsAsArray[i], walkerHeap, aStarTraversedIndicies, targetNeighbourPortalIndicies, goalSectorCostGrid);
                 if (!stoppedIndex.IsValid()) { continue; }
                 NewPickAStarNodes(stoppedIndex);
                 ResetTraversedIndicies(aStarTraversedIndicies);
@@ -120,7 +119,11 @@ namespace FlowFieldNavigation
                 curNodeIndex = curPortalData.OriginIndex;
             }
         }
-        PortalTraversalIndex RunReductionAStar(int sourcePortalIndex, SingleFloatUnsafeHeap<PortalTraversalIndex> traversalHeap, NativeList<int> aStarTraversedIndicies, NativeList<int> targetNeighbourPortalIndicies)
+        PortalTraversalIndex RunReductionAStar(int sourcePortalIndex, 
+            SingleFloatUnsafeHeap<PortalTraversalIndex> traversalHeap, 
+            NativeList<int> aStarTraversedIndicies, 
+            NativeList<int> targetNeighbourPortalIndicies,
+            NativeArray<float> goalSectorCostGrid)
         {
             //Handle initial portal
             PortalTraversalData sourceData = PortalTraversalDataArray[sourcePortalIndex];
@@ -138,7 +141,7 @@ namespace FlowFieldNavigation
             int sourcePor2P2pIdx = sourceNode.Portal2.PorToPorPtr;
             int sourcePor1P2pCnt = sourceNode.Portal1.PorToPorCnt;
             int sourcePor2P2pCnt = sourceNode.Portal2.PorToPorCnt;
-            SubmitIfGoalSector(ref sourceData, sourcePortalIndex, sourceNode.Portal1.Index, sourceNode.Portal2.Index, targetNeighbourPortalIndicies);
+            SubmitIfGoalSector(ref sourceData, sourcePortalIndex, sourceNode.Portal1.Index, sourceNode.Portal2.Index, targetNeighbourPortalIndicies, goalSectorCostGrid);
             TraverseNeighbours(sourceData, aStarTraversedIndicies, ref traversalHeap, sourcePortalIndex, sourcePor1P2pIdx, sourcePor1P2pCnt);
             TraverseNeighbours(sourceData, aStarTraversedIndicies, ref traversalHeap, sourcePortalIndex, sourcePor2P2pIdx, sourcePor2P2pCnt);
 
@@ -159,7 +162,7 @@ namespace FlowFieldNavigation
                     curData.Mark |= PortalTraversalMark.DijkstraTraversable;
                     PortalTraversalDataArray[index] = curData;
                 }
-                SubmitIfGoalSector(ref curData, index, curNode.Portal1.Index, curNode.Portal2.Index, targetNeighbourPortalIndicies);
+                SubmitIfGoalSector(ref curData, index, curNode.Portal1.Index, curNode.Portal2.Index, targetNeighbourPortalIndicies, goalSectorCostGrid);
                 TraverseNeighbours(curData, aStarTraversedIndicies, ref traversalHeap, index, por1P2pIdx, por1P2pCnt);
                 TraverseNeighbours(curData, aStarTraversedIndicies, ref traversalHeap, index, por2P2pIdx, por2P2pCnt);
                 SetNextNode(ref traversalHeap, out curPortalIndex, out curData);
@@ -388,6 +391,7 @@ namespace FlowFieldNavigation
                         destinationData.DistanceFromTarget = 0;
                         GoalTraversalDataList.Add(destinationData);
                         GoalTraversalDataFieldIndexList.Add(FlowFieldUtilities.To1D(generalIndexAtSector, FieldColAmount));
+                        GoalNeighborIndexToGoalIndexMap.Remove(portalNodeIndex);
                         GoalNeighborIndexToGoalIndexMap.Add(portalNodeIndex, GoalTraversalDataList.Length - 1);
                         portalData.DistanceFromTarget = distanceToGoal;
                         portalData.Mark |= PortalTraversalMark.GoalNeighbour;
@@ -403,13 +407,12 @@ namespace FlowFieldNavigation
             }
         }
 
-        void SubmitIfGoalSector(ref PortalTraversalData curTravData, int curPortalIndex, int2 portalFieldIndex1, int2 portalFieldIndex2, NativeList<int> goalNeighbourPortalIndicies)
+        void SubmitIfGoalSector(ref PortalTraversalData curTravData, int curPortalIndex, int2 portalFieldIndex1, int2 portalFieldIndex2, NativeList<int> goalNeighbourPortalIndicies, NativeArray<float> goalSectorCostGrid)
         {
             int sector1 = FlowFieldUtilities.GetSector1D(portalFieldIndex1, SectorColAmount, SectorMatrixColAmount);
             int sector2 = FlowFieldUtilities.GetSector1D(portalFieldIndex2, SectorColAmount, SectorMatrixColAmount);
-            NativeArray<float> targetSectorCostsGrid = new NativeArray<float>(SectorTileAmount, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
-            bool succesfull1 = TrySector(sector1, targetSectorCostsGrid, goalNeighbourPortalIndicies);
-            bool succesfull2 = TrySector(sector2, targetSectorCostsGrid, goalNeighbourPortalIndicies);
+            bool succesfull1 = TrySector(sector1, goalSectorCostGrid, goalNeighbourPortalIndicies);
+            bool succesfull2 = TrySector(sector2, goalSectorCostGrid, goalNeighbourPortalIndicies);
             if(succesfull1 || succesfull2)
             {
                 curTravData = PortalTraversalDataArray[curPortalIndex];
