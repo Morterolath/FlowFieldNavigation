@@ -136,7 +136,6 @@ namespace FlowFieldNavigation
             {
                 if (_debugAroundAgent) { _spatialHashGridDebugger.DebugAgent(AgentToDebug, _gridIndex); }
                 if (_debugPortalTraversalMarks) { _pathDebugger.DebugPortalTraversalMarks(AgentToDebug, _portalHeightBuilder.GetPortalHeights(_costFieldOffset)); }
-                if (_debugPortalTargetNeighbours) { _pathDebugger.DebugTargetNeighbourPortals(AgentToDebug, _portalHeightBuilder.GetPortalHeights(_costFieldOffset)); }
                 if (_debugPortalSequence) { _pathDebugger.DebugPortalSequence(AgentToDebug, _portalHeightBuilder.GetPortalHeights(_costFieldOffset)); }
                 if (_debugIntegrationField) { _pathDebugger.DebugIntegrationField(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
                 if (_debugFlowField) { _pathDebugger.DebugFlowField(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }

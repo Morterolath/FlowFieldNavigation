@@ -45,6 +45,7 @@ namespace FlowFieldNavigation
                 NativeHashMap<int,int> goalNeighborIndexToGoalIndexMap = _pathContainer.PathGoalNeighbourIndexToGoalIndexMaps[pathIndex];
                 NativeList<int> goalTraversalDataFieldIndexList = _pathContainer.PathGoalTraversalDataFieldIndexLists[pathIndex];
                 NativeHashSet<int> alreadyConsideredGoalSectorIndexMap = _pathContainer.PathAlreadyConsideredSectorIndexMaps[pathIndex];
+                float goalRange = _pathContainer.PathRanges[pathIndex];
                 int2 destinationIndex = FlowFieldUtilities.PosTo2D(destinationData.Destination, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
                 CostField pickedCostField = _navigationManager.FieldDataContainer.GetCostFieldWithOffset(destinationData.Offset);
                 FieldGraph pickedFieldGraph = _navigationManager.FieldDataContainer.GetFieldGraphWithOffset(destinationData.Offset);
@@ -58,7 +59,7 @@ namespace FlowFieldNavigation
                 PortalReductionJob reductionJob = new PortalReductionJob()
                 {
                     GoalPosition = destinationData.Destination,
-                    GoalRange = 0f,
+                    GoalRange = goalRange,
                     TileSize = FlowFieldUtilities.TileSize,
                     GoalIndex = destinationIndex,
                     FieldColAmount = FlowFieldUtilities.FieldColAmount,

@@ -253,35 +253,6 @@ namespace FlowFieldNavigation
                 Handles.Label(labelPos, record.PortalIndex + " : " + record.DistanceFromTarget.ToString());
             }
         }
-        internal void DebugTargetNeighbourPortals(FlowFieldAgent agent, NativeArray<float> portalHeights)
-        {
-            if (_pathContainer == null) { return; }
-            if (_pathContainer.PathfindingInternalDataList.Count == 0) { return; }
-            int pathIndex = agent.GetPathIndex();
-            if (pathIndex == -1) { return; }
-
-            PathPortalTraversalData portalTraversalData = _pathContainer.PathPortalTraversalDataList[pathIndex];
-            PathDestinationData destinationData = _navigationManager.PathDataContainer.PathDestinationDataList[pathIndex];
-            float tileSize = FlowFieldUtilities.TileSize;
-            FieldGraph fg = _fieldProducer.GetFieldGraphWithOffset(destinationData.Offset);
-            NativeArray<PortalNode> portalNodes = fg.PortalNodes;
-            NativeArray<PortalTraversalDataRecord> portalTraversalDataRecords = portalTraversalData.PortalDataRecords.AsArray();
-
-            for (int i = 0; i < portalNodes.Length; i++)
-            {
-                PortalTraversalDataRecord travDataRecord = portalTraversalDataRecords[i];
-                PortalNode node = portalNodes[travDataRecord.PortalIndex];
-                if ((travDataRecord.Mark & PortalTraversalMark.GoalNeighbour) == PortalTraversalMark.GoalNeighbour)
-                {
-                    Gizmos.color = Color.magenta;
-                    Vector3 portalPos = node.GetPosition(tileSize, FlowFieldUtilities.FieldGridStartPosition);
-                    portalPos.y = portalHeights[travDataRecord.PortalIndex];
-                    Vector3 labelPos = portalPos + new Vector3(0, 3, 0);
-                    Handles.Label(labelPos, "d: " + travDataRecord.DistanceFromTarget.ToString());
-                    Gizmos.DrawSphere(portalPos, 0.25f);
-                }
-            }
-        }
         internal void DebugPortalSequence(FlowFieldAgent agent, NativeArray<float> portalHeights)
         {
             if (_pathContainer == null) { return; }

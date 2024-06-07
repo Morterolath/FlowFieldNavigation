@@ -12,6 +12,10 @@ namespace FlowFieldNavigation
     internal struct IntegrationFieldJob : IJob
     {
         internal int2 TargetIndex;
+        internal float2 Goal;
+        internal float GoalRange;
+        internal float TileSize;
+        internal float2 FieldGridStartPos;
         internal int FieldColAmount;
         internal int FieldRowAmount;
         internal int SectorColAmount;
@@ -22,7 +26,7 @@ namespace FlowFieldNavigation
         [ReadOnly] internal NativeArray<byte> CostField;
         [ReadOnly] internal NativeParallelMultiHashMap<int, ActiveWaveFront> SectorToWaveFrontsMap;
         [ReadOnly] internal NativeArray<int> SectorFlowStartTable;
-
+        [ReadOnly] internal NativeHashSet<int> PossibleGoalSectors;
         internal NativeArray<IntegrationTile> IntegrationField;
         public void Execute()
         {
@@ -30,14 +34,22 @@ namespace FlowFieldNavigation
             {
                 int sectorIndex = SectorIndiciesToCalculateIntegration[i];
                 int sectorFlowStart = SectorFlowStartTable[sectorIndex];
+                NativeList<int> goalTileList = new NativeList<int>(Allocator.Temp);
+                NativeQueue<LocalIndex1d> integrationQueue = new NativeQueue<LocalIndex1d>(Allocator.Temp);
                 NativeSlice<IntegrationTile> integrationSectorSlice = new NativeSlice<IntegrationTile>(IntegrationField, sectorFlowStart, SectorTileAmount);
                 NativeSlice<byte> costSectorSlice = new NativeSlice<byte>(CostField, sectorIndex * SectorTileAmount, SectorTileAmount);
-                Integrate(integrationSectorSlice, costSectorSlice, sectorIndex);
+                Integrate(integrationSectorSlice, costSectorSlice, goalTileList, integrationQueue, sectorIndex);
             }
         }
-        void Integrate(NativeSlice<IntegrationTile> integrationFieldSector, NativeSlice<byte> costs, int sectorIndex)
+        void Integrate(
+            NativeSlice<IntegrationTile> integrationFieldSector, 
+            NativeSlice<byte> costs, 
+            NativeList<int> goalTileList, 
+            NativeQueue<LocalIndex1d> integrationQueue,
+            int sectorIndex)
         {
-            NativeQueue<LocalIndex1d> integrationQueue = new NativeQueue<LocalIndex1d>(Allocator.Temp);
+            integrationQueue.Clear();
+            goalTileList.Clear();
             int sectorColAmount = SectorColAmount;
             int sectorTileAmount = sectorColAmount * sectorColAmount;
 
@@ -70,19 +82,9 @@ namespace FlowFieldNavigation
             bool wAvailable;
             ///////////////////////////////////////////////
             //CODE
-            int targetSector1d = FlowFieldUtilities.GetSector1D(TargetIndex, sectorColAmount, SectorMatrixColAmount);
-            if (sectorIndex == targetSector1d)
-            {
-                int targetLocal1d = FlowFieldUtilities.GetLocal1D(TargetIndex, sectorColAmount);
-                IntegrationTile startTile = integrationFieldSector[targetLocal1d];
-                startTile.Cost = 0f;
-                integrationFieldSector[targetLocal1d] = startTile;
-                SetLookupTable(targetLocal1d);
-                Enqueue();
-            }
 
+            //Submit start tile costs
             NativeParallelMultiHashMap<int, ActiveWaveFront>.Enumerator enumerator = SectorToWaveFrontsMap.GetValuesForKey(sectorIndex);
-
             while (enumerator.MoveNext())
             {
                 ActiveWaveFront front = enumerator.Current;
@@ -93,6 +95,25 @@ namespace FlowFieldNavigation
                     Mark = startTile.Mark,
                 };
             }
+            if (PossibleGoalSectors.Contains(sectorIndex))
+            {
+                for (int i = 0; i < integrationFieldSector.Length; i++)
+                {
+                    byte tileCost = costs[i];
+                    if(tileCost == byte.MaxValue) { continue; }
+                    int2 general2d = FlowFieldUtilities.GetGeneral2d(i, sectorIndex, SectorMatrixColAmount, sectorColAmount);
+                    float2 centerPos = FlowFieldUtilities.IndexToPos(general2d, TileSize, FieldGridStartPos);
+                    float distanceToGoal = math.distance(Goal, centerPos);
+                    if (distanceToGoal > GoalRange || TargetIndex.Equals(general2d)) { continue; }
+
+                    IntegrationTile goalTile = integrationFieldSector[i];
+                    goalTile.Cost = 0f;
+                    integrationFieldSector[i] = goalTile;
+                    goalTileList.Add(i);
+                }
+            }
+
+            //Start fast marching from start indicies
             enumerator.Reset();
             while (enumerator.MoveNext())
             {
@@ -100,6 +121,14 @@ namespace FlowFieldNavigation
                 SetLookupTable(index);
                 Enqueue();
             }
+            for (int i = 0; i < goalTileList.Length; i++)
+            {
+                int goalTileIndex = goalTileList[i];
+                SetLookupTable(goalTileIndex);
+                Enqueue();
+            }
+
+            //Rests of fast marching
             while (!integrationQueue.IsEmpty())
             {
                 LocalIndex1d cur = integrationQueue.Dequeue();

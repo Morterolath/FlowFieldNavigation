@@ -57,30 +57,6 @@ namespace FlowFieldNavigation
 
             return JobHandle.CombineDependencies(tempHandleArray);
         }
-        /*
-        internal void TryComplete()
-        {
-            for (int i = ScheduledRequestedSectorCalculations.Length - 1; i >= 0; i--)
-            {
-                PathPipelineInfoWithHandle pathInfo = ScheduledRequestedSectorCalculations[i];
-                pathInfo.Handle.Complete();
-                _flowCalculationScheduler.ScheduleFlow(pathInfo);
-            }
-            ScheduledRequestedSectorCalculations.Clear();
-            _flowCalculationScheduler.TryComplete();
-        }
-
-        internal void ForceComplete()
-        {
-            for (int i = ScheduledRequestedSectorCalculations.Length - 1; i >= 0; i--)
-            {
-                PathPipelineInfoWithHandle pathInfo = ScheduledRequestedSectorCalculations[i];
-                pathInfo.Handle.Complete();
-                _flowCalculationScheduler.ScheduleFlow(pathInfo);
-            }
-            ScheduledRequestedSectorCalculations.Clear();
-            _flowCalculationScheduler.ForceComplete();
-        }*/
     }
 
 
