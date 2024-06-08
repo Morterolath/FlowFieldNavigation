@@ -12,6 +12,7 @@ namespace FlowFieldNavigation
     {
         FlowFieldNavigationManager _navManager;
         List<Mesh> _debugMeshes;
+        List<Mesh> _cornerDebugMeshes;
         float2 _lastDebuggedGoal;
         float _lastDebuggedRange;
         int _lastPathIndex;
@@ -20,10 +21,11 @@ namespace FlowFieldNavigation
         {
             _navManager = navManager;
             _debugMeshes = new List<Mesh>();
+            _cornerDebugMeshes = new List<Mesh>();
             _lastPathIndex = -1;
         }
 
-        internal List<Mesh> GetDebugMeshes(float2 goal, float goalRange, int pathIndex)
+        internal void GetDebugMeshes(float2 goal, float goalRange, int pathIndex, out List<Mesh> debugMeshes, out List<Mesh> borderDebugMeshes)
         {
             bool isGoalPointChanged = !_lastDebuggedGoal.Equals(goal);
             bool isGoalRangeChanged = _lastDebuggedRange != goalRange;
@@ -35,15 +37,18 @@ namespace FlowFieldNavigation
                 _lastDebuggedRange = goalRange;
                 _lastPathIndex = pathIndex;
             }
-            return _debugMeshes;
+            debugMeshes = _debugMeshes;
+            borderDebugMeshes = _cornerDebugMeshes;
         }
 
         void CreateDebugMeshes(float2 goal, float goalRange)
         {
             _debugMeshes.Clear();
+            _cornerDebugMeshes.Clear();
             const int RowAndColCountPerMesh = 200;
             NativeList<float3> verts = new NativeList<float3>(Allocator.Temp);
             NativeList<int> trigs = new NativeList<int>(Allocator.Temp);
+            NativeList<int> borderTrigs = new NativeList<int>(Allocator.Temp);
             TriangleSpatialHashGrid trigSpatHashGrid = _navManager.FieldDataContainer.HeightMeshGenerator.GetTriangleSpatialHashGrid();
             NativeArray<float3> heightMeshVerts = _navManager.FieldDataContainer.HeightMeshGenerator.Verticies.AsArray();
             float rangeMinX = goal.x - goalRange;
@@ -62,8 +67,10 @@ namespace FlowFieldNavigation
                     int2 meshEndTileIndex = math.min(meshStartTileIndex + RowAndColCountPerMesh - 1, rangeMaxIndex);
                     verts.Length = 0;
                     trigs.Length = 0;
+                    borderTrigs.Length = 0;
                     ComputeMesh(ref verts, 
-                        ref trigs, 
+                        ref trigs,
+                        ref borderTrigs,
                         trigSpatHashGrid,
                         heightMeshVerts,
                         goal, 
@@ -74,6 +81,8 @@ namespace FlowFieldNavigation
                         FlowFieldUtilities.FieldGridStartPosition);
                     Mesh mesh = CreateMesh(verts.AsArray(), trigs.AsArray());
                     _debugMeshes.Add(mesh);
+                    Mesh borderMesh = CreateMesh(verts.AsArray(), borderTrigs.AsArray());
+                    _cornerDebugMeshes.Add(borderMesh);
                 }
             }
         }
@@ -89,8 +98,9 @@ namespace FlowFieldNavigation
         }
 
         [BurstCompile]
-        static void ComputeMesh(ref NativeList<float3> verts, 
+        static void ComputeMesh(ref NativeList<float3> verts,
             ref NativeList<int> trigs,
+            ref NativeList<int> borderTrigs,
             in TriangleSpatialHashGrid trigSpatHashGrid,
             in NativeArray<float3> heightMeshVerts,
             in float2 goal,
@@ -139,6 +149,19 @@ namespace FlowFieldNavigation
                     int topLeftVertIndex = botLeftVertIndex + vertColAmount;
                     int topRightVertIndex = topLeftVertIndex + 1;
                     int botRightVertIndex = botLeftVertIndex + 1;
+                    if (IsTileBorder(goal, range, curFieldIndex, tileSize, fieldGridStartPos))
+                    {
+                        borderTrigs.Add(topLeftVertIndex);
+                        borderTrigs.Add(topRightVertIndex);
+                        borderTrigs.Add(topRightVertIndex);
+                        borderTrigs.Add(botRightVertIndex);
+                        borderTrigs.Add(botLeftVertIndex);
+                        borderTrigs.Add(botRightVertIndex);
+                        borderTrigs.Add(botLeftVertIndex);
+                        borderTrigs.Add(topLeftVertIndex);
+                        usedIndexMap.Add(curIndex1d);
+                        continue;
+                    }
                     if (!usedIndexMap.Contains(nIndex1d))
                     {
                         trigs.Add(topLeftVertIndex);
@@ -162,6 +185,17 @@ namespace FlowFieldNavigation
                     usedIndexMap.Add(curIndex1d);
                 }
             }
+        }
+        static bool IsTileBorder(float2 goal, float goalRange, int2 tileGeneral2d, float tileSize, float2 fieldGridStartPos)
+        {
+            float2 tilePos = FlowFieldUtilities.IndexToPos(tileGeneral2d, tileSize, fieldGridStartPos);
+            float dx = math.abs(goal.x - tilePos.x);
+            float dy = math.abs(goal.y - tilePos.y);
+            float goalRangeSq = goalRange * goalRange;
+            float tileDistSq = dx * dx + dy * dy;
+            float tileXIncDistSq = (dx + tileSize) * (dx + tileSize) + dy * dy;
+            float tileYIncDistSq = dx * dx + (dy + tileSize) * (dy + tileSize);
+            return tileDistSq <= goalRangeSq && (tileXIncDistSq > goalRangeSq || tileYIncDistSq > goalRangeSq);
         }
     }
 }

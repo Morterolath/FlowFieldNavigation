@@ -38,11 +38,16 @@ namespace FlowFieldNavigation
 
 			//Debug indicies
 			Gizmos.color = Color.red;
-            List<Mesh> debugMeshes = _debugMeshBuilder.GetDebugMeshes(destination, range, pathIndex);
+            _debugMeshBuilder.GetDebugMeshes(destination, range, pathIndex, out List<Mesh> debugMeshes, out List<Mesh> borderMeshes);
 			for(int i = 0; i < debugMeshes.Count; i++)
 			{
 				Gizmos.DrawWireMesh(debugMeshes[i], new Vector3(0,0.1f,0));
 			}
+			Gizmos.color = Color.blue;
+            for (int i = 0; i < borderMeshes.Count; i++)
+            {
+                Gizmos.DrawWireMesh(borderMeshes[i], new Vector3(0, 0.1f, 0));
+            }
         }
 	}
 }
