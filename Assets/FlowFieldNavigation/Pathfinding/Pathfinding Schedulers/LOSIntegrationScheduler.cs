@@ -38,6 +38,7 @@ namespace FlowFieldNavigation
                 PathfindingInternalData internalData = _pathContainer.PathfindingInternalDataList[pathIndex];
                 PathDestinationData destinationData = _pathContainer.PathDestinationDataList[pathIndex];
                 NativeArray<int> sectorToFlowStartTable = _pathContainer.SectorToFlowStartTables[pathIndex];
+                float goalRange = _pathContainer.PathRanges[pathIndex];
                 int2 targetIndex = FlowFieldUtilities.PosTo2D(destinationData.Destination, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
                 CostField pickedCostField = _navigationManager.FieldDataContainer.GetCostFieldWithOffset(destinationData.Offset);
 
@@ -64,6 +65,7 @@ namespace FlowFieldNavigation
 
                     LOSIntegrationJob losjob = new LOSIntegrationJob()
                     {
+                        FieldGridStartPos = FlowFieldUtilities.FieldGridStartPosition,
                         SectorColAmount = FlowFieldUtilities.SectorColAmount,
                         SectorMatrixColAmount = FlowFieldUtilities.SectorMatrixColAmount,
                         SectorMatrixRowAmount = FlowFieldUtilities.SectorMatrixRowAmount,
@@ -73,6 +75,8 @@ namespace FlowFieldNavigation
                         TileSize = FlowFieldUtilities.TileSize,
                         FieldRowAmount = FlowFieldUtilities.FieldRowAmount,
 
+                        Goal = destinationData.Destination,
+                        GoalRange = goalRange,
                         Costs = pickedCostField.Costs,
                         SectorToPicked = sectorToFlowStartTable,
                         IntegrationField = internalData.IntegrationField.AsArray(),
@@ -85,6 +89,7 @@ namespace FlowFieldNavigation
                 {
                     LOSIntegrationJob losjob = new LOSIntegrationJob()
                     {
+                        FieldGridStartPos = FlowFieldUtilities.FieldGridStartPosition,
                         SectorColAmount = FlowFieldUtilities.SectorColAmount,
                         SectorMatrixColAmount = FlowFieldUtilities.SectorMatrixColAmount,
                         SectorMatrixRowAmount = FlowFieldUtilities.SectorMatrixRowAmount,
@@ -94,6 +99,8 @@ namespace FlowFieldNavigation
                         TileSize = FlowFieldUtilities.TileSize,
                         FieldRowAmount = FlowFieldUtilities.FieldRowAmount,
 
+                        Goal = destinationData.Destination,
+                        GoalRange = goalRange,
                         Costs = pickedCostField.Costs,
                         SectorToPicked = sectorToFlowStartTable,
                         IntegrationField = internalData.IntegrationField.AsArray(),

@@ -14,6 +14,9 @@ namespace FlowFieldNavigation
     internal struct LOSIntegrationJob : IJob
     {
         internal int2 Target;
+        internal float2 Goal;
+        internal float2 FieldGridStartPos;
+        internal float GoalRange;
         internal float TileSize;
         internal float MaxLOSRange;
         internal int FieldColAmount;
@@ -31,6 +34,12 @@ namespace FlowFieldNavigation
             int sectorColAmount = SectorColAmount;
             int sectorTileAmount = SectorTileAmount;
             int sectorMatrixColAmount = SectorMatrixColAmount;
+            int fieldRowAmount = FieldRowAmount;
+            int fieldColAmount = FieldColAmount;
+            float tileSize = TileSize;
+            float2 goal = Goal;
+            float goalRange = GoalRange;
+            float2 fieldGridStartPos = FieldGridStartPos;
             float maxLosRange = MaxLOSRange;
             int2 targetGeneral2d = Target;
             NativeArray<int> sectorToPickedTable = SectorToPicked;
@@ -149,7 +158,7 @@ namespace FlowFieldNavigation
                 swLocal1d = sLocal1d - 1;
                 nwLocal1d = nLocal1d - 1;
 
-                //OVERFLOWS
+                //LOCAL OVERFLOWS
                 bool nLocalOverflow = nLocal1d >= sectorTileAmount;
                 bool eLocalOverflow = (eLocal1d % sectorColAmount) == 0;
                 bool sLocalOverflow = sLocal1d < 0;
@@ -194,6 +203,16 @@ namespace FlowFieldNavigation
                 swGeneral2d = FlowFieldUtilities.GetGeneral2d(swLocal1d, swSector1d, sectorMatrixColAmount, sectorColAmount);
                 nwGeneral2d = FlowFieldUtilities.GetGeneral2d(nwLocal1d, nwSector1d, sectorMatrixColAmount, sectorColAmount);
 
+                //Are tiles at border
+                bool nBorder = nGeneral2d.y >= fieldRowAmount - 1;
+                bool eBorder = eGeneral2d.x >= fieldColAmount - 1;
+                bool sBorder = sGeneral2d.y < 1;
+                bool wBorder = wGeneral2d.x < 1;
+                bool neBorder = nBorder || eBorder;
+                bool seBorder = sBorder || eBorder;
+                bool swBorder = sBorder || wBorder;
+                bool nwBorder = nBorder || wBorder;
+
                 //SECTOR MARKS
                 curSectorMark = sectorToPickedTable[curSector1d];
                 nSectorMark = sectorToPickedTable[nSector1d];
@@ -216,15 +235,45 @@ namespace FlowFieldNavigation
                 swTile = integrationField[swSectorMark + swLocal1d];
                 nwTile = integrationField[nwSectorMark + nwLocal1d];
 
+                //Tile center positions
+                float2 nPos = FlowFieldUtilities.IndexToPos(nGeneral2d, tileSize, fieldGridStartPos);
+                float2 ePos = FlowFieldUtilities.IndexToPos(eGeneral2d, tileSize, fieldGridStartPos);
+                float2 sPos = FlowFieldUtilities.IndexToPos(sGeneral2d, tileSize, fieldGridStartPos);
+                float2 wPos = FlowFieldUtilities.IndexToPos(wGeneral2d, tileSize, fieldGridStartPos);
+                float2 nePos = FlowFieldUtilities.IndexToPos(neGeneral2d, tileSize, fieldGridStartPos);
+                float2 sePos = FlowFieldUtilities.IndexToPos(seGeneral2d, tileSize, fieldGridStartPos);
+                float2 swPos = FlowFieldUtilities.IndexToPos(swGeneral2d, tileSize, fieldGridStartPos);
+                float2 nwPos = FlowFieldUtilities.IndexToPos(nwGeneral2d, tileSize, fieldGridStartPos);
+
+                //Tile center distances to goal
+                float nDist = math.distance(nPos, goal);
+                float eDist = math.distance(ePos, goal);
+                float sDist = math.distance(sPos, goal);
+                float wDist = math.distance(wPos, goal);
+                float neDist = math.distance(nePos, goal);
+                float seDist = math.distance(sePos, goal);
+                float swDist = math.distance(swPos, goal);
+                float nwDist = math.distance(nwPos, goal);
+
+                //Tile within range
+                bool nWithinRange = nDist <= goalRange;
+                bool eWithinRange = eDist <= goalRange;
+                bool sWithinRange = sDist <= goalRange;
+                bool wWithinRange = wDist <= goalRange;
+                bool neWithinRange = neDist <= goalRange;
+                bool seWithinRange = seDist <= goalRange;
+                bool swWithinRange = swDist <= goalRange;
+                bool nwWithinRange = nwDist <= goalRange;
+
                 //COSTS
-                nUnwalkable = costs[nSector1d * sectorTileAmount + nLocal1d] == byte.MaxValue;
-                eUnwalkable = costs[eSector1d * sectorTileAmount + eLocal1d] == byte.MaxValue;
-                sUnwalkable = costs[sSector1d * sectorTileAmount + sLocal1d] == byte.MaxValue;
-                wUnwalkable = costs[wSector1d * sectorTileAmount + wLocal1d] == byte.MaxValue;
-                neUnwalkable = costs[neSector1d * sectorTileAmount + neLocal1d] == byte.MaxValue;
-                seUnwalkable = costs[seSector1d * sectorTileAmount + seLocal1d] == byte.MaxValue;
-                swUnwalkable = costs[swSector1d * sectorTileAmount + swLocal1d] == byte.MaxValue;
-                nwUnwalkable = costs[nwSector1d * sectorTileAmount + nwLocal1d] == byte.MaxValue;
+                nUnwalkable = (costs[nSector1d * sectorTileAmount + nLocal1d] == byte.MaxValue && !nWithinRange) || nBorder;
+                eUnwalkable = (costs[eSector1d * sectorTileAmount + eLocal1d] == byte.MaxValue && !eWithinRange) || eBorder;
+                sUnwalkable = (costs[sSector1d * sectorTileAmount + sLocal1d] == byte.MaxValue && !sWithinRange) || sBorder;
+                wUnwalkable = (costs[wSector1d * sectorTileAmount + wLocal1d] == byte.MaxValue && !wWithinRange) || wBorder;
+                neUnwalkable = (costs[neSector1d * sectorTileAmount + neLocal1d] == byte.MaxValue && !neWithinRange) || neBorder;
+                seUnwalkable = (costs[seSector1d * sectorTileAmount + seLocal1d] == byte.MaxValue && !seWithinRange) || seBorder;
+                swUnwalkable = (costs[swSector1d * sectorTileAmount + swLocal1d] == byte.MaxValue && !swWithinRange) || swBorder;
+                nwUnwalkable = (costs[nwSector1d * sectorTileAmount + nwLocal1d] == byte.MaxValue && !nwWithinRange) || nwBorder;
 
                 //TILES
                 nTile = integrationField[nSectorMark + nLocal1d];
@@ -400,7 +449,11 @@ namespace FlowFieldNavigation
                         //MARK
                         int2 general2d = new int2(x, y) * reflection + offset;
                         LocalIndex1d localIndex = FlowFieldUtilities.GetLocal1D(general2d, sectorColAmount, sectorMatrixColAmount);
-                        if (costs[localIndex.sector * sectorTileAmount + localIndex.index] == byte.MaxValue) { break; }
+                        float2 tilePos = FlowFieldUtilities.IndexToPos(general2d, tileSize, fieldGridStartPos);
+                        float tileDist = math.distance(tilePos, goal);
+                        bool tileWithinRange = tileDist <= goalRange;
+                        bool tileIsUnwalkable = costs[localIndex.sector * sectorTileAmount + localIndex.index] == byte.MaxValue && !tileWithinRange;
+                        if (tileIsUnwalkable) { break; }
                         if (GetDistanceFromStart(general2d) > maxLosRange) { break; }
                         int sectorMark = sectorToPickedTable[localIndex.sector];
                         if (sectorMark == 0) { continue; }
@@ -439,7 +492,11 @@ namespace FlowFieldNavigation
                         //MARK
                         int2 general2d = new int2(y, x) * reflection + offset;
                         LocalIndex1d localIndex = FlowFieldUtilities.GetLocal1D(general2d, sectorColAmount, sectorMatrixColAmount);
-                        if (costs[localIndex.sector * sectorTileAmount + localIndex.index] == byte.MaxValue) { break; }
+                        float2 tilePos = FlowFieldUtilities.IndexToPos(general2d, tileSize, fieldGridStartPos);
+                        float tileDist = math.distance(tilePos, goal);
+                        bool tileWithinRange = tileDist <= goalRange;
+                        bool tileIsUnwalkable = costs[localIndex.sector * sectorTileAmount + localIndex.index] == byte.MaxValue && !tileWithinRange;
+                        if (tileIsUnwalkable) { break; }
                         if (GetDistanceFromStart(general2d) > maxLosRange) { break; }
                         int sectorMark = sectorToPickedTable[localIndex.sector];
                         if (sectorMark == 0) { continue; }
