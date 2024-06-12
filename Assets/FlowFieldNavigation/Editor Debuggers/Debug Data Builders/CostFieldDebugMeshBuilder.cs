@@ -71,9 +71,9 @@ namespace FlowFieldNavigation
                     {
                         Mesh mesh = CreateMesh(verts, trigs);
                         _debugMeshes.Add(mesh);
-                        verts.Dispose();
-                        trigs.Dispose();
                     }
+                    verts.Dispose();
+                    trigs.Dispose();
                 }
             }
         }

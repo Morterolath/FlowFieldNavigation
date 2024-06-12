@@ -61,6 +61,7 @@ namespace FlowFieldNavigation
                 Points = portalPositions,
             };
             pointHeight.Schedule(portalNodes.Length, 64).Complete();
+            portalPositions.Dispose();
         }
     }
 }

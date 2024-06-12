@@ -194,7 +194,14 @@ namespace FlowFieldNavigation
             };
             tileHeightExclusionJob.Schedule(costsToWriteOnTopOf.Length, 64).Complete();
 
-
+            //Deallocation
+            NativeHashMap<int, UnsafeBitArray>.Enumerator surfaceVolumeBitMapEnumerator = SurfaceVolumeBits.GetEnumerator();
+            while (surfaceVolumeBitMapEnumerator.MoveNext())
+            {
+                surfaceVolumeBitMapEnumerator.Current.Value.Dispose();
+            }
+            SurfaceVolumeBits.Dispose();
+            HighestVoxelSaveTable.Dispose();
             volumeStartPos.Dispose();
             xAxisSectorCount.Dispose();
             yAxisSectorCount.Dispose();

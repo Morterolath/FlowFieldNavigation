@@ -35,6 +35,7 @@ namespace FlowFieldNavigation
             NavigationVolumeSystem.AnalyzeVolume(heightMeshVerts, heightMeshTrigs, staticObstacles, voxelHorizontalSize, voxelVerticalSize, maxSurfaceHeightDifference, maxWalkableHeight, baseCostField);
             _costFieldProducer.ProduceCostFields(FlowFieldUtilities.MaxCostFieldOffset, baseCostField);
             _fieldGraphProducer.ProduceFieldGraphs(_costFieldProducer.GetAllCostFields());
+            baseCostField.Dispose();
         }
         internal FieldGraph GetFieldGraphWithOffset(int offset)
         {
