@@ -46,6 +46,7 @@ namespace FlowFieldNavigation
                 NativeList<int> goalTraversalDataFieldIndexList = _pathContainer.PathGoalTraversalDataFieldIndexLists[pathIndex];
                 NativeHashSet<int> alreadyConsideredGoalSectorIndexMap = _pathContainer.PathAlreadyConsideredSectorIndexMaps[pathIndex];
                 float goalRange = _pathContainer.PathRanges[pathIndex];
+                int islandSeed = _pathContainer.PathIslandSeedsAsFieldIndicies[pathIndex];
                 int2 destinationIndex = FlowFieldUtilities.PosTo2D(destinationData.Destination, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
                 CostField pickedCostField = _navigationManager.FieldDataContainer.GetCostFieldWithOffset(destinationData.Offset);
                 FieldGraph pickedFieldGraph = _navigationManager.FieldDataContainer.GetFieldGraphWithOffset(destinationData.Offset);
@@ -60,6 +61,7 @@ namespace FlowFieldNavigation
                 {
                     GoalPosition = destinationData.Destination,
                     GoalRange = goalRange,
+                    IslandSeed = islandSeed,
                     TileSize = FlowFieldUtilities.TileSize,
                     GoalIndex = destinationIndex,
                     FieldColAmount = FlowFieldUtilities.FieldColAmount,

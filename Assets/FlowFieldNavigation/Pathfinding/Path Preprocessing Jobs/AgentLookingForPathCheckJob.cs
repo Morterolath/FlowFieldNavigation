@@ -10,11 +10,13 @@ namespace FlowFieldNavigation
     internal struct AgentLookingForPathCheckJob : IJob
     {
         internal float TileSize;
+        internal int FieldColAmount;
         internal int SectorColAmount;
         internal int SectorMatrixColAmount;
         internal int SectorTileAmount;
         internal float2 FieldGridStartPos;
         [ReadOnly] internal NativeArray<IslandFieldProcessor> IslandFieldProcessors;
+        [ReadOnly] internal NativeArray<int> PathIslandSeedsAsFieldIndex;
         [ReadOnly] internal NativeArray<PathRoutineData> PathRoutineDataArray;
         [ReadOnly] internal NativeArray<PathDestinationData> PathDestinationDataArray;
         [ReadOnly] internal NativeArray<int> AgentFlockIndicies;
@@ -72,8 +74,10 @@ namespace FlowFieldNavigation
             {
                 int pathIndex = pathIndicies[i];
                 PathDestinationData destinationData = PathDestinationDataArray[pathIndex];
+                int pathIslandSeed = PathIslandSeedsAsFieldIndex[pathIndex];
+                int2 islandIndex2d = FlowFieldUtilities.To2D(pathIslandSeed, FieldColAmount);
                 if (agentOffset != destinationData.Offset) { continue; }
-                int destinationIsland = islandFieldProcessor.GetIsland(destinationData.Destination);
+                int destinationIsland = islandFieldProcessor.GetIsland(islandIndex2d);
                 if (destinationIsland != agentIsland) { continue; }
                 PathRoutineData routineData = PathRoutineDataArray[pathIndex];
                 if (routineData.PathReconstructionFlag) { continue; }
@@ -85,30 +89,8 @@ namespace FlowFieldNavigation
                 AgentIndiciesToSubExistingPath.Add(agentAndPath);
                 return true;
             }
-            return false;/*
-        for (int pathIndex = 0; pathIndex < PathStateArray.Length; pathIndex++)
-        {
-            if (PathStateArray[pathIndex] == PathState.Removed) { continue; }
-            int pathFlock = PathFlockIndicies[pathIndex];
-            if (pathFlock != agentFlock) { continue; }
-            PathDestinationData destinationData = PathDestinationDataArray[pathIndex];
-            if (agentOffset != destinationData.Offset) { continue; }
-            int destinationIsland = islandFieldProcessor.GetIsland(destinationData.Destination);
-            if (destinationIsland != agentIsland) { continue; }
-            PathRoutineData routineData = PathRoutineDataArray[pathIndex];
-            if (routineData.PathReconstructionFlag) { continue; }
-            AgentAndPath agentAndPath = new AgentAndPath()
-            {
-                AgentIndex = agentIndex,
-                PathIndex = pathIndex,
-            };
-            AgentIndiciesToSubExistingPath.Add(agentAndPath);
-            return true;
-        }
-        return false;*/
+            return false;
         }
 
     }
-    //Very naive approach O(m*n). Searches all paths for each agent in the list. Make it O(n).
-
 }

@@ -13,6 +13,7 @@ namespace FlowFieldNavigation
         internal int2 GoalIndex;
         internal float2 GoalPosition;
         internal float GoalRange;
+        internal int IslandSeed;
         internal float TileSize;
         internal int FieldColAmount;
         internal int FieldRowAmount;
@@ -322,7 +323,8 @@ namespace FlowFieldNavigation
         }
         void SetSourcePortalIndicies()
         {
-            int targetIsland = GetIsland(GoalIndex);
+            int2 islandSeed2d = FlowFieldUtilities.To2D(IslandSeed, FieldColAmount);
+            int targetIsland = GetIsland(islandSeed2d);
             int sectorTileAmount = SectorColAmount * SectorColAmount;
             for (int i = 0; i < SourcePositions.Length; i++)
             {

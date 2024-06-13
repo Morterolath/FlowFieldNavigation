@@ -143,6 +143,7 @@ namespace FlowFieldNavigation
             PathSectorToFlowStartMapper flowStartMap = _pathContainer.SectorFlowStartMap;
             NativeArray<PathUpdateSeed> pathUpdateSeeds = _navigationManager.PathUpdateSeedContainer.UpdateSeeds.AsArray();
             NativeArray<float> PathDesiredRanges = _pathContainer.PathDesiredRanges.AsArray();
+            NativeArray<int> pathIslandSeedsAsFieldIndex = _pathContainer.PathIslandSeedsAsFieldIndicies.AsArray();
 
             //Copy agent positions from transforms
             _agentPositions.Length = agentTransforms.length;
@@ -364,6 +365,7 @@ namespace FlowFieldNavigation
             AgentLookingForPathCheckJob agentLookingForPathCheck = new AgentLookingForPathCheckJob()
             {
                 TileSize = FlowFieldUtilities.TileSize,
+                FieldColAmount = FlowFieldUtilities.FieldColAmount,
                 SectorColAmount = FlowFieldUtilities.SectorColAmount,
                 SectorTileAmount = FlowFieldUtilities.SectorTileAmount,
                 FieldGridStartPos = FlowFieldUtilities.FieldGridStartPosition,
@@ -373,6 +375,7 @@ namespace FlowFieldNavigation
                     FlockSlices = _hashMapFlockSlices,
                     PathIndicies = _hashMapPathIndicies,
                 },
+                PathIslandSeedsAsFieldIndex = pathIslandSeedsAsFieldIndex,
                 AgentRadii = agentRadii,
                 AgentPositions = _agentPositions.AsArray(),
                 AgentFlockIndicies = agentFlockIndexArray,
