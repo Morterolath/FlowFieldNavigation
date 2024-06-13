@@ -100,12 +100,12 @@ namespace FlowFieldNavigation
 
             int offset = 1;
 
-            float pickedExtensionIndexCost = float.MaxValue;
+            float pickedExtensionIndexDistance = float.MaxValue;
             int pickedExtensionIndexLocalIndex = 0;
             int pickedExtensionIndexSector = 0;
 
 
-            while (pickedExtensionIndexCost == float.MaxValue)
+            while (pickedExtensionIndexDistance == float.MaxValue)
             {
                 int2 topLeft = destinationIndex + new int2(-offset, offset);
                 int2 topRight = destinationIndex + new int2(offset, offset);
@@ -150,11 +150,11 @@ namespace FlowFieldNavigation
                     for (int i = topLeftSector; i <= topRightSector; i++)
                     {
                         int colStart = math.select(0, topLeft.x % SectorColAmount, i == topLeftSector);
-                        int colEnd = math.select(10, topRight.x % SectorColAmount, i == topRightSector);
+                        int colEnd = math.select(9, topRight.x % SectorColAmount, i == topRightSector);
                         ExtensionIndex checkedExtension = CheckSectorRow(i, rowToCheck, colStart, colEnd);
-                        if (checkedExtension.IsValid() && checkedExtension.Cost < pickedExtensionIndexCost)
+                        if (checkedExtension.IsValid() && checkedExtension.Distance < pickedExtensionIndexDistance)
                         {
-                            pickedExtensionIndexCost = checkedExtension.Cost;
+                            pickedExtensionIndexDistance = checkedExtension.Distance;
                             pickedExtensionIndexLocalIndex = checkedExtension.LocalIndex;
                             pickedExtensionIndexSector = checkedExtension.SectorIndex;
                         }
@@ -166,11 +166,11 @@ namespace FlowFieldNavigation
                     for (int i = topRightSector; i >= botRightSector; i -= SectorMatrixColAmount)
                     {
                         int rowStart = math.select(9, topRight.y % SectorRowAmount, i == topRightSector);
-                        int rowEnd = math.select(-1, botRight.y % SectorRowAmount, i == botRightSector);
+                        int rowEnd = math.select(0, botRight.y % SectorRowAmount, i == botRightSector);
                         ExtensionIndex checkedExtension = CheckSectorCol(i, colToCheck, rowStart, rowEnd);
-                        if (checkedExtension.IsValid() && checkedExtension.Cost < pickedExtensionIndexCost)
+                        if (checkedExtension.IsValid() && checkedExtension.Distance < pickedExtensionIndexDistance)
                         {
-                            pickedExtensionIndexCost = checkedExtension.Cost;
+                            pickedExtensionIndexDistance = checkedExtension.Distance;
                             pickedExtensionIndexLocalIndex = checkedExtension.LocalIndex;
                             pickedExtensionIndexSector = checkedExtension.SectorIndex;
                         }
@@ -182,11 +182,11 @@ namespace FlowFieldNavigation
                     for (int i = botRightSector; i >= botLeftSector; i--)
                     {
                         int colStart = math.select(9, botRight.x % SectorColAmount, i == botRightSector);
-                        int colEnd = math.select(-1, botLeft.x % SectorColAmount, i == botLeftSector);
+                        int colEnd = math.select(0, botLeft.x % SectorColAmount, i == botLeftSector);
                         ExtensionIndex checkedExtension = CheckSectorRow(i, rowToCheck, colStart, colEnd);
-                        if (checkedExtension.IsValid() && checkedExtension.Cost < pickedExtensionIndexCost)
+                        if (checkedExtension.IsValid() && checkedExtension.Distance < pickedExtensionIndexDistance)
                         {
-                            pickedExtensionIndexCost = checkedExtension.Cost;
+                            pickedExtensionIndexDistance = checkedExtension.Distance;
                             pickedExtensionIndexLocalIndex = checkedExtension.LocalIndex;
                             pickedExtensionIndexSector = checkedExtension.SectorIndex;
                         }
@@ -198,11 +198,11 @@ namespace FlowFieldNavigation
                     for (int i = botLeftSector; i <= topLeftSector; i += SectorMatrixColAmount)
                     {
                         int rowStart = math.select(0, botLeft.y % SectorRowAmount, i == botLeftSector);
-                        int rowEnd = math.select(10, topLeft.y % SectorRowAmount, i == topLeftSector);
+                        int rowEnd = math.select(9, topLeft.y % SectorRowAmount, i == topLeftSector);
                         ExtensionIndex checkedExtension = CheckSectorCol(i, colToCheck, rowStart, rowEnd);
-                        if (checkedExtension.IsValid() && checkedExtension.Cost < pickedExtensionIndexCost)
+                        if (checkedExtension.IsValid() && checkedExtension.Distance < pickedExtensionIndexDistance)
                         {
-                            pickedExtensionIndexCost = checkedExtension.Cost;
+                            pickedExtensionIndexDistance = checkedExtension.Distance;
                             pickedExtensionIndexLocalIndex = checkedExtension.LocalIndex;
                             pickedExtensionIndexSector = checkedExtension.SectorIndex;
                         }
@@ -218,72 +218,72 @@ namespace FlowFieldNavigation
             {
                 if (islandFieldProcessors.GetIslandIfNotField(sectorToCheck, out int islandOut))
                 {
-                    if (islandOut != desiredIsland) { return new ExtensionIndex() { Cost = float.MaxValue }; }
+                    if (islandOut != desiredIsland) { return new ExtensionIndex() { Distance = float.MaxValue }; }
                 }
-                float currentExtensionIndexCost = float.MaxValue;
+                float currentExtensionIndexDistance = float.MaxValue;
                 int currentExtensionIndexLocalIndex = 0;
-                int sectorStride = sectorToCheck * sectorTileAmount;
+                int sectorCostStartIndex = sectorToCheck * sectorTileAmount;
                 int startLocal = rowToCheck * sectorColAmount + colToStart;
-                int checkRange = colToEnd - colToStart;
+                int checkRange = colToEnd - colToStart + 1;
                 int checkCount = math.abs(checkRange);
                 int checkCountNonZero = math.select(checkCount, 1, checkCount == 0);
                 int checkUnit = checkRange / checkCountNonZero;
 
-                int startIndex = sectorStride + startLocal;
+                int startIndex = sectorCostStartIndex + startLocal;
                 for (int i = 0; i < checkCount; i++)
                 {
                     int indexToCheck = startIndex + i * checkUnit;
-                    int localIndex = indexToCheck - sectorStride;
+                    int localIndex = indexToCheck - sectorCostStartIndex;
                     byte cost = costField[indexToCheck];
                     if (cost == byte.MaxValue) { continue; }
                     int island = islandFieldProcessors.GetIsland(sectorToCheck, localIndex);
                     if (island == desiredIsland)
                     {
                         float newExtensionCost = FlowFieldUtilities.GetCostBetween(sectorToCheck, localIndex, destinationSector, destinationLocalIndex, sectorColAmount, sectorMatrixColAmount);
-                        if (newExtensionCost < currentExtensionIndexCost) { currentExtensionIndexCost = newExtensionCost; currentExtensionIndexLocalIndex = localIndex; }
+                        if (newExtensionCost < currentExtensionIndexDistance) { currentExtensionIndexDistance = newExtensionCost; currentExtensionIndexLocalIndex = localIndex; }
                     }
                 }
                 return new ExtensionIndex()
                 {
                     SectorIndex = sectorToCheck,
                     LocalIndex = currentExtensionIndexLocalIndex,
-                    Cost = currentExtensionIndexCost
+                    Distance = currentExtensionIndexDistance
                 };
             }
             ExtensionIndex CheckSectorCol(int sectorToCheck, int colToCheck, int rowToStart, int rowToEnd)
             {
                 if (islandFieldProcessors.GetIslandIfNotField(sectorToCheck, out int islandOut))
                 {
-                    if (islandOut != desiredIsland) { return new ExtensionIndex() { Cost = float.MaxValue }; }
+                    if (islandOut != desiredIsland) { return new ExtensionIndex() { Distance = float.MaxValue }; }
                 }
-                float currentExtensionIndexCost = float.MaxValue;
+                float currentExtensionIndexDistance = float.MaxValue;
                 int currentExtensionIndexLocalIndex = 0;
-                int sectorStride = sectorToCheck * sectorTileAmount;
+                int sectorCostStartIndex = sectorToCheck * sectorTileAmount;
                 int startLocal = rowToStart * sectorColAmount + colToCheck;
-                int checkRange = rowToEnd - rowToStart;
+                int checkRange = rowToEnd - rowToStart + 1;
                 int checkCount = math.abs(checkRange);
                 int checkCountNonZero = math.select(checkCount, 1, checkCount == 0);
                 int checkUnit = checkRange / checkCountNonZero;
 
-                int startIndex = sectorStride + startLocal;
+                int startIndex = sectorCostStartIndex + startLocal;
                 for (int i = 0; i < checkCount; i++)
                 {
                     int indexToCheck = startIndex + i * sectorColAmount * checkUnit;
-                    int localIndex = indexToCheck - sectorStride;
+                    int localIndex = indexToCheck - sectorCostStartIndex;
                     byte cost = costField[indexToCheck];
                     if (cost == byte.MaxValue) { continue; }
                     int island = islandFieldProcessors.GetIsland(sectorToCheck, localIndex);
                     if (island == desiredIsland)
                     {
                         float newExtensionCost = FlowFieldUtilities.GetCostBetween(sectorToCheck, localIndex, destinationSector, destinationLocalIndex, sectorColAmount, sectorMatrixColAmount);
-                        if (newExtensionCost < currentExtensionIndexCost) { currentExtensionIndexCost = newExtensionCost; currentExtensionIndexLocalIndex = localIndex; }
+                        if (newExtensionCost < currentExtensionIndexDistance) { currentExtensionIndexDistance = newExtensionCost; currentExtensionIndexLocalIndex = localIndex; }
                     }
                 }
                 return new ExtensionIndex()
                 {
                     SectorIndex = sectorToCheck,
                     LocalIndex = currentExtensionIndexLocalIndex,
-                    Cost = currentExtensionIndexCost
+                    Distance = currentExtensionIndexDistance
                 };
             }
         }
@@ -293,11 +293,11 @@ namespace FlowFieldNavigation
         {
             internal int LocalIndex;
             internal int SectorIndex;
-            internal float Cost;
+            internal float Distance;
 
             internal bool IsValid()
             {
-                return Cost != float.MaxValue;
+                return Distance != float.MaxValue;
             }
         }
     }
