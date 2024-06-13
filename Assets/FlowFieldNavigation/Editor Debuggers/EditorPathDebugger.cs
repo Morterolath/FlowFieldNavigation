@@ -36,6 +36,17 @@ namespace FlowFieldNavigation
             _fieldProducer = navigationManager.FieldDataContainer;
             _tileSize = FlowFieldUtilities.TileSize;
         }
+        internal void DebugIslandSeed(FlowFieldAgent agent)
+        {
+            int pathIndex = agent.GetPathIndex();
+            if (pathIndex == -1) { return; }
+            int islandSeedAsIndex1d = _navigationManager.PathDataContainer.PathIslandSeedsAsFieldIndicies[pathIndex];
+            int2 islandSeedAsIndex2d = FlowFieldUtilities.To2D(islandSeedAsIndex1d, FlowFieldUtilities.FieldColAmount);
+            float2 islandSeedAsPos = FlowFieldUtilities.IndexToPos(islandSeedAsIndex2d, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
+            float3 pos3 = new float3(islandSeedAsPos.x, _navigationManager.HeightMeshImmediateQueryManager.GetHeightBurst(islandSeedAsPos), islandSeedAsPos.y);
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawCube(pos3, new Vector3(0.3f, 0.3f, 0.3f));
+        }
         internal void DebugPathUpdateSeeds(FlowFieldAgent agent)
         {
             int pathIndex = agent.GetPathIndex();
@@ -516,80 +527,6 @@ namespace FlowFieldNavigation
                 flowDir = math.normalizesafe(flowDir) * 0.4f;
                 Vector3 targetPos = pos + new Vector3(flowDir.x, 0f, flowDir.y);
                 Gizmos.DrawLine(pos, targetPos);
-            }
-        }
-
-        internal void DebugDestination(FlowFieldAgent agent)
-        {
-            if (agent == null) { return; }
-            int pathIndex = agent.GetPathIndex();
-            if (pathIndex == -1) { return; }
-
-            PathDestinationData destinationData = _navigationManager.PathDataContainer.PathDestinationDataList[_navigationManager.Interface.GetPathIndex(agent)];
-            NativeArray<float> pathRanges = _navigationManager.PathDataContainer.PathRanges.AsArray();
-            NativeArray<float3> heightMeshVerticies = _navigationManager.FieldDataContainer.HeightMeshGenerator.Verticies.AsArray();
-            TriangleSpatialHashGrid spatialHashGrid = _navigationManager.FieldDataContainer.HeightMeshGenerator.GetTriangleSpatialHashGrid();
-
-            //Debug destination
-            Vector2 destination = destinationData.Destination;
-            Vector3 destination3 = new Vector3(destination.x, GetHeight(destination, spatialHashGrid, heightMeshVerticies), destination.y);
-            Gizmos.color = Color.blue;
-            Gizmos.DrawSphere(destination3, 0.3f);
-
-            //Debug range
-            float range = pathRanges[pathIndex];
-            Gizmos.DrawWireSphere(destination3, range);
-
-
-            float GetHeight(float2 pos, TriangleSpatialHashGrid triangleSpatialHashGrid, NativeArray<float3> heightMeshVerts)
-            {
-                float curHeight = float.MinValue;
-                for (int i = 0; i < triangleSpatialHashGrid.GetGridCount(); i++)
-                {
-                    bool succesfull = triangleSpatialHashGrid.TryGetIterator(pos, i, out TriangleSpatialHashGridIterator triangleGridIterator);
-                    if (!succesfull) { return 0; }
-                    while (triangleGridIterator.HasNext())
-                    {
-                        NativeSlice<int> triangles = triangleGridIterator.GetNextRow();
-                        for (int j = 0; j < triangles.Length; j += 3)
-                        {
-                            int v1Index = triangles[j];
-                            int v2Index = triangles[j + 1];
-                            int v3Index = triangles[j + 2];
-                            float3 v13d = heightMeshVerts[v1Index];
-                            float3 v23d = heightMeshVerts[v2Index];
-                            float3 v33d = heightMeshVerts[v3Index];
-                            float2 v1 = new float2(v13d.x, v13d.z);
-                            float2 v2 = new float2(v23d.x, v23d.z);
-                            float2 v3 = new float2(v33d.x, v33d.z);
-
-                            BarycentricCoordinates barCords = GetBarycentricCoordinatesForEachVectorInTheOrderUVW(v1, v2, v3, pos);
-                            if (barCords.u < 0 || barCords.w < 0 || barCords.v < 0) { continue; }
-                            float newHeight = v13d.y * barCords.u + v23d.y * barCords.v + v33d.y * barCords.w;
-                            curHeight = math.select(curHeight, newHeight, newHeight > curHeight);
-                        }
-                    }
-                }
-                return math.select(curHeight, 0, curHeight == float.MinValue);
-            }
-            BarycentricCoordinates GetBarycentricCoordinatesForEachVectorInTheOrderUVW(float2 a, float2 b, float2 c, float2 p)
-            {
-                float2 v0 = b - a, v1 = c - a, v2 = p - a;
-                float d00 = math.dot(v0, v0);
-                float d01 = math.dot(v0, v1);
-                float d11 = math.dot(v1, v1);
-                float d20 = math.dot(v2, v0);
-                float d21 = math.dot(v2, v1);
-                float denom = d00 * d11 - d01 * d01;
-                float v = (d11 * d20 - d01 * d21) / denom;
-                float w = (d00 * d21 - d01 * d20) / denom;
-                float u = 1.0f - v - w;
-                return new BarycentricCoordinates()
-                {
-                    v = v,
-                    u = u,
-                    w = w,
-                };
             }
         }
 

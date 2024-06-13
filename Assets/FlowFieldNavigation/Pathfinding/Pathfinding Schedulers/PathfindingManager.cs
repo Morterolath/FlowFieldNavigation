@@ -490,7 +490,8 @@ namespace FlowFieldNavigation
             {
                 FinalPathRequest currentpath = _finalPathRequests[i];
                 if (!currentpath.IsValid()) { continue; }
-                int newPathIndex = _pathContainer.CreatePath(currentpath);
+                float2 randomSourcePointForIslandSeed = _sourcePositions[currentpath.SourcePositionStartIndex];
+                int newPathIndex = _pathContainer.CreatePath(currentpath, randomSourcePointForIslandSeed);
                 PathRoutineData routineData = _pathContainer.PathRoutineDataList[newPathIndex];
                 routineData.Task |= PathTask.FlowRequest;
                 routineData.Task |= PathTask.PathAdditionRequest;

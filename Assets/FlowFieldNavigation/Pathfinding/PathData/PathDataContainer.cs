@@ -32,6 +32,7 @@ namespace FlowFieldNavigation
         internal NativeList<int> RemovedExposedFlowAndLosIndicies;
         internal List<NativeList<int>> PathGoalTraversalDataFieldIndexLists;
         internal List<NativeHashSet<int>> PathAlreadyConsideredSectorIndexMaps;
+        internal NativeList<int> PathIslandSeedsAsFieldIndicies;
         Stack<int> _removedPathIndicies;
 
         FieldDataContainer _fieldProducer;
@@ -69,6 +70,7 @@ namespace FlowFieldNavigation
             PathGoalNeighbourIndexToGoalIndexMaps = new List<NativeHashMap<int, int>>();
             PathGoalTraversalDataFieldIndexLists = new List<NativeList<int>>();
             PathAlreadyConsideredSectorIndexMaps = new List<NativeHashSet<int>>();
+            PathIslandSeedsAsFieldIndicies = new NativeList<int>(Allocator.Persistent);
         }
         internal void DisposeAll()
         {
@@ -197,7 +199,7 @@ namespace FlowFieldNavigation
             };
             dataExposeJob.Schedule().Complete();
         }
-        internal int CreatePath(FinalPathRequest request)
+        internal int CreatePath(FinalPathRequest request, float2 anySourcePoint)
         {
             PreallocationPack preallocations = _preallocator.GetPreallocations();
 
@@ -249,6 +251,8 @@ namespace FlowFieldNavigation
             };
 
             NativeArray<OverlappingDirection> sectorOverlappingDirections = new NativeArray<OverlappingDirection>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent);
+            int2 islandSeed2d = FlowFieldUtilities.PosTo2D(anySourcePoint, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
+            int islandSeed1d = FlowFieldUtilities.To1D(islandSeed2d, FlowFieldUtilities.FieldColAmount);
             if (PathfindingInternalDataList.Count == pathIndex)
             {
                 PathfindingInternalDataList.Add(internalData);
@@ -266,6 +270,7 @@ namespace FlowFieldNavigation
                 PathGoalNeighbourIndexToGoalIndexMaps.Add(new NativeHashMap<int, int>(0, Allocator.Persistent));
                 PathGoalTraversalDataFieldIndexLists.Add(new NativeList<int>(Allocator.Persistent));
                 PathAlreadyConsideredSectorIndexMaps.Add(new NativeHashSet<int>(0, Allocator.Persistent));
+                PathIslandSeedsAsFieldIndicies.Add(islandSeed1d);
             }
             else
             {
@@ -284,6 +289,7 @@ namespace FlowFieldNavigation
                 PathGoalNeighbourIndexToGoalIndexMaps[pathIndex] = new NativeHashMap<int, int>(0, Allocator.Persistent);
                 PathGoalTraversalDataFieldIndexLists[pathIndex] = new NativeList<int>(Allocator.Persistent);
                 PathAlreadyConsideredSectorIndexMaps[pathIndex] = new NativeHashSet<int>(0, Allocator.Persistent);
+                PathIslandSeedsAsFieldIndicies[pathIndex] = islandSeed1d;
             }
 
             return pathIndex;
