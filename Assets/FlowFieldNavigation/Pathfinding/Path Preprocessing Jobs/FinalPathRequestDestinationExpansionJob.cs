@@ -58,7 +58,25 @@ namespace FlowFieldNavigation
                     pickedFinalRequests[index] = request;
                     continue;
                 }
-                float2 newDestination = GetClosestIndex(request.Destination, sourceIsland, islandProcessor, CostFields[request.Offset]);
+                float2 newDestination = GetClosestIndex(
+                    request.Destination, 
+                    sourceIsland, 
+                    islandProcessor, 
+                    CostFields[request.Offset],
+                    out int2 lastTopLeft,
+                    out int2 lastTopRight,
+                    out int2 lastBotLeft,
+                    out int2 lastBotRight);
+                newDestination = MakeSureExpandedDestinationIsClosest(
+                    lastBotLeft,
+                    lastBotRight,
+                    lastTopLeft,
+                    lastTopRight,
+                    newDestination,
+                    request.Destination,
+                    sourceIsland,
+                    CostFields[request.Offset],
+                    islandProcessor);
                 request.Destination = newDestination;
                 pickedFinalRequests[index] = request;
             }
@@ -86,9 +104,159 @@ namespace FlowFieldNavigation
             }
             return sliceToReturn;
         }
-
-        float2 GetClosestIndex(float2 destination, int desiredIsland, IslandFieldProcessor islandFieldProcessors, UnsafeListReadOnly<byte> costField)
+        float2 MakeSureExpandedDestinationIsClosest(
+            int2 lastBotLeft,
+            int2 lastBotRight,
+            int2 lastTopLeft,
+            int2 lastTopRight,
+            float2 pickedPosition,
+            float2 goalPosition,
+            int desiredIsland,
+            UnsafeListReadOnly<byte> costField,
+            IslandFieldProcessor islandFieldProcessor)
         {
+            float tileSize = TileSize;
+            float2 fieldGridStartPos = FieldGridStartPos;
+            int sectorColAmount = SectorColAmount;
+            int sectorMatrixColAmount = SectorMatrixColAmount;
+            int sectorTileAmount = SectorTileAmount;
+
+            float curGoalDistSq = math.distancesq(pickedPosition, goalPosition);
+            float curGoalDist = math.sqrt(curGoalDistSq);
+
+            int topSearchStartRow = math.min(FieldRowAmount - 1, lastTopLeft.y + 1);
+            int topSearchEndRow;
+            int topSearchStartCol = lastTopLeft.x;
+            int topSearchEndCol = lastTopRight.x;
+
+            int botSearchStartRow = math.max(0, lastBotLeft.y - 1);
+            int botSearchEndRow;
+            int botSearchStartCol = lastBotLeft.x;
+            int botSearchEndCol = lastBotRight.x;
+
+            int rightSearchStartRow = lastBotRight.y;
+            int rightSearchEndRow = lastTopRight.y;
+            int rightSearchStartCol = math.min(FieldColAmount - 1, lastTopRight.x + 1);
+            int rightSearchEndCol;
+
+            int leftSearchStartRow = lastBotLeft.y;
+            int leftSearchEndRow = lastTopLeft.y;
+            int leftSearchStartCol = math.max(0, lastTopLeft.x - 1);
+            int leftSearchEndCol;
+
+            SetEndFor_Top_Right_Bot_Left(goalPosition, curGoalDist, out topSearchEndRow, out botSearchEndRow, out rightSearchEndCol, out leftSearchEndCol);
+
+            int curTopSearchRow = topSearchStartRow;
+            int curBotSearchRow = botSearchStartRow;
+            int curRightSearchCol = rightSearchStartCol;
+            int curLeftSearchCol = leftSearchStartCol;
+            bool topExhausted = false;
+            bool botExhausted = false;
+            bool rightExhausted = false;
+            bool leftExhausted = false;
+
+            bool exhausted = false;
+            float2 foundPosition = pickedPosition;
+            while (!exhausted)
+            {
+                topExhausted = topSearchEndRow < curTopSearchRow;
+                botExhausted = botSearchEndRow > curBotSearchRow;
+                rightExhausted = rightSearchEndCol < curRightSearchCol;
+                leftExhausted = leftSearchEndCol > curLeftSearchCol;
+                exhausted = topExhausted && botExhausted && rightExhausted && leftExhausted;
+
+                if (!topExhausted)
+                {
+                    for (int c = topSearchStartCol; c <= topSearchEndCol; c++)
+                    {
+                        int2 curIndex = new int2(c, curTopSearchRow);
+                        if (!IndexSuitable(curIndex, out float2 newPickedPos, out float newGoalDistSq)) { continue; }
+                        foundPosition = newPickedPos;
+                        curGoalDistSq = newGoalDistSq;
+                        curGoalDist = math.sqrt(curGoalDistSq);
+                        SetEndFor_Top_Right_Bot_Left(goalPosition, curGoalDist, out topSearchEndRow, out botSearchEndRow, out rightSearchEndCol, out leftSearchEndCol);
+                    }
+                }
+                if (!botExhausted)
+                {
+                    for (int c = botSearchStartCol; c <= botSearchEndCol; c++)
+                    {
+                        int2 curIndex = new int2(c, curBotSearchRow);
+                        if (!IndexSuitable(curIndex, out float2 newPickedPos, out float newGoalDistSq)) { continue; }
+                        foundPosition = newPickedPos;
+                        curGoalDistSq = newGoalDistSq;
+                        curGoalDist = math.sqrt(curGoalDistSq);
+                        SetEndFor_Top_Right_Bot_Left(goalPosition, curGoalDist, out topSearchEndRow, out botSearchEndRow, out rightSearchEndCol, out leftSearchEndCol);
+                    }
+                }
+                if (!rightExhausted)
+                {
+                    for (int r = rightSearchStartRow; r <= rightSearchEndRow; r++)
+                    {
+                        int2 curIndex = new int2(curRightSearchCol, r);
+                        if (!IndexSuitable(curIndex, out float2 newPickedPos, out float newGoalDistSq)) { continue; }
+                        foundPosition = newPickedPos;
+                        curGoalDistSq = newGoalDistSq;
+                        curGoalDist = math.sqrt(curGoalDistSq);
+                        SetEndFor_Top_Right_Bot_Left(goalPosition, curGoalDist, out topSearchEndRow, out botSearchEndRow, out rightSearchEndCol, out leftSearchEndCol);
+                    }
+                }
+                if (!leftExhausted)
+                {
+                    for (int r = leftSearchStartRow; r <= leftSearchEndRow; r++)
+                    {
+                        int2 curIndex = new int2(curLeftSearchCol, r);
+                        if (!IndexSuitable(curIndex, out float2 newPickedPos, out float newGoalDistSq)) { continue; }
+                        foundPosition = newPickedPos;
+                        curGoalDistSq = newGoalDistSq;
+                        curGoalDist = math.sqrt(curGoalDistSq);
+                        SetEndFor_Top_Right_Bot_Left(goalPosition, curGoalDist, out topSearchEndRow, out botSearchEndRow, out rightSearchEndCol, out leftSearchEndCol);
+                    }
+                }
+                curTopSearchRow++;
+                curBotSearchRow--;
+                curRightSearchCol++;
+                curLeftSearchCol--;
+            }
+            return foundPosition;
+            bool IndexSuitable(int2 curIndex, out float2 indexPos, out float indexGoalDistSq)
+            {
+                indexPos = FlowFieldUtilities.IndexToPos(curIndex, tileSize, fieldGridStartPos);
+                indexGoalDistSq = math.distancesq(indexPos, goalPosition);
+                bool closeEnough = indexGoalDistSq < curGoalDistSq;
+                LocalIndex1d curLocalIndex = FlowFieldUtilities.GetLocal1D(curIndex, sectorColAmount, sectorMatrixColAmount);
+                int curCostFieldIndex = curLocalIndex.sector * sectorTileAmount + curLocalIndex.index;
+                byte curCost = costField[curCostFieldIndex];
+                bool walkable = curCost != byte.MaxValue;
+                int curIsland = islandFieldProcessor.GetIsland(curLocalIndex.sector, curLocalIndex.index);
+                bool onDesiredIsland = curIsland == desiredIsland;
+                return onDesiredIsland && closeEnough && walkable;
+            }
+        }
+        void SetEndFor_Top_Right_Bot_Left(float2 goalPosition, float curGoalDist, out int topEndRow, out int botEndRow, out int rightEndCol, out int leftEndCol)
+        {
+            int2 topIndex = FlowFieldUtilities.PosTo2D(new float2(goalPosition.x, goalPosition.y + curGoalDist), TileSize, FieldGridStartPos);
+            int2 botIndex = FlowFieldUtilities.PosTo2D(new float2(goalPosition.x, goalPosition.y - curGoalDist), TileSize, FieldGridStartPos);
+            int2 rightIndex = FlowFieldUtilities.PosTo2D(new float2(goalPosition.x + curGoalDist, goalPosition.y), TileSize, FieldGridStartPos);
+            int2 leftIndex = FlowFieldUtilities.PosTo2D(new float2(goalPosition.x - curGoalDist, goalPosition.y), TileSize, FieldGridStartPos);
+
+            topEndRow = math.min(FieldRowAmount - 1, topIndex.y);
+            botEndRow = math.max(0, botIndex.y);
+            rightEndCol = math.min(FieldColAmount - 1, rightIndex.x);
+            leftEndCol = math.max(0, leftIndex.x);
+        }
+        float2 GetClosestIndex(
+            float2 destination, 
+            int desiredIsland, 
+            IslandFieldProcessor islandFieldProcessors, 
+            UnsafeListReadOnly<byte> costField,
+            out int2 lastTopLeft,
+            out int2 lastTopRight,
+            out int2 lastBotLeft,
+            out int2 lastBotRight)
+        {
+            float tileSize = TileSize;
+            float2 fieldGridStartPos = FieldGridStartPos;
             int sectorTileAmount = SectorTileAmount;
             int sectorColAmount = SectorColAmount;
             int sectorMatrixColAmount = SectorMatrixColAmount;
@@ -105,19 +273,30 @@ namespace FlowFieldNavigation
             int pickedExtensionIndexSector = 0;
 
 
+            int2 topLeft = destinationIndex;
+            int2 topRight = destinationIndex;
+            int2 botLeft = destinationIndex;
+            int2 botRight = destinationIndex;
             while (pickedExtensionIndexDistance == float.MaxValue)
             {
-                int2 topLeft = destinationIndex + new int2(-offset, offset);
-                int2 topRight = destinationIndex + new int2(offset, offset);
-                int2 botLeft = destinationIndex + new int2(-offset, -offset);
-                int2 botRight = destinationIndex + new int2(offset, -offset);
+                topLeft = destinationIndex + new int2(-offset, offset);
+                topRight = destinationIndex + new int2(offset, offset);
+                botLeft = destinationIndex + new int2(-offset, -offset);
+                botRight = destinationIndex + new int2(offset, -offset);
 
                 bool topOverflow = topLeft.y >= FieldRowAmount;
                 bool botOverflow = botLeft.y < 0;
                 bool rightOverflow = topRight.x >= FieldColAmount;
                 bool leftOverflow = topLeft.x < 0;
 
-                if (topOverflow && botOverflow && rightOverflow && leftOverflow) { return destination; }
+                if (topOverflow && botOverflow && rightOverflow && leftOverflow)
+                {
+                    lastTopLeft = topLeft;
+                    lastBotLeft = botLeft;
+                    lastTopRight = topRight;
+                    lastBotRight = botRight;
+                    return destination;
+                }
 
                 if (topOverflow)
                 {
@@ -165,8 +344,8 @@ namespace FlowFieldNavigation
                     int colToCheck = topRight.x % SectorColAmount;
                     for (int i = topRightSector; i >= botRightSector; i -= SectorMatrixColAmount)
                     {
-                        int rowStart = math.select(9, topRight.y % SectorRowAmount, i == topRightSector);
-                        int rowEnd = math.select(0, botRight.y % SectorRowAmount, i == botRightSector);
+                        int rowStart = math.select(0, botRight.y % SectorRowAmount, i == botRightSector);
+                        int rowEnd = math.select(9, topRight.y % SectorRowAmount, i == topRightSector);
                         ExtensionIndex checkedExtension = CheckSectorCol(i, colToCheck, rowStart, rowEnd);
                         if (checkedExtension.IsValid() && checkedExtension.Distance < pickedExtensionIndexDistance)
                         {
@@ -181,8 +360,8 @@ namespace FlowFieldNavigation
                     int rowToCheck = botRight.y % SectorRowAmount;
                     for (int i = botRightSector; i >= botLeftSector; i--)
                     {
-                        int colStart = math.select(9, botRight.x % SectorColAmount, i == botRightSector);
-                        int colEnd = math.select(0, botLeft.x % SectorColAmount, i == botLeftSector);
+                        int colStart = math.select(0, botLeft.x % SectorColAmount, i == botLeftSector);
+                        int colEnd = math.select(9, botRight.x % SectorColAmount, i == botRightSector);
                         ExtensionIndex checkedExtension = CheckSectorRow(i, rowToCheck, colStart, colEnd);
                         if (checkedExtension.IsValid() && checkedExtension.Distance < pickedExtensionIndexDistance)
                         {
@@ -212,6 +391,10 @@ namespace FlowFieldNavigation
             }
 
             int2 outputGeneral2d = FlowFieldUtilities.GetGeneral2d(pickedExtensionIndexLocalIndex, pickedExtensionIndexSector, sectorMatrixColAmount, sectorColAmount);
+            lastTopLeft = topLeft;
+            lastBotLeft = botLeft;
+            lastTopRight = topRight;
+            lastBotRight = botRight;
             return FlowFieldUtilities.IndexToPos(outputGeneral2d, TileSize, FieldGridStartPos);
 
             ExtensionIndex CheckSectorRow(int sectorToCheck, int rowToCheck, int colToStart, int colToEnd)
@@ -221,32 +404,26 @@ namespace FlowFieldNavigation
                     if (islandOut != desiredIsland) { return new ExtensionIndex() { Distance = float.MaxValue }; }
                 }
                 float currentExtensionIndexDistance = float.MaxValue;
-                int currentExtensionIndexLocalIndex = 0;
-                int sectorCostStartIndex = sectorToCheck * sectorTileAmount;
-                int startLocal = rowToCheck * sectorColAmount + colToStart;
-                int checkRange = colToEnd - colToStart + 1;
-                int checkCount = math.abs(checkRange);
-                int checkCountNonZero = math.select(checkCount, 1, checkCount == 0);
-                int checkUnit = checkRange / checkCountNonZero;
-
-                int startIndex = sectorCostStartIndex + startLocal;
-                for (int i = 0; i < checkCount; i++)
+                int currentExtensionLocalIndex = 0;
+                for(int c = colToStart; c <= colToEnd; c++)
                 {
-                    int indexToCheck = startIndex + i * checkUnit;
-                    int localIndex = indexToCheck - sectorCostStartIndex;
-                    byte cost = costField[indexToCheck];
+                    int2 local2d = new int2(c, rowToCheck);
+                    int local1d = FlowFieldUtilities.To1D(local2d, sectorColAmount);
+                    int costFieldIndex = sectorToCheck * sectorTileAmount + local1d;
+                    byte cost = costField[costFieldIndex];
                     if (cost == byte.MaxValue) { continue; }
-                    int island = islandFieldProcessors.GetIsland(sectorToCheck, localIndex);
-                    if (island == desiredIsland)
-                    {
-                        float newExtensionCost = FlowFieldUtilities.GetCostBetween(sectorToCheck, localIndex, destinationSector, destinationLocalIndex, sectorColAmount, sectorMatrixColAmount);
-                        if (newExtensionCost < currentExtensionIndexDistance) { currentExtensionIndexDistance = newExtensionCost; currentExtensionIndexLocalIndex = localIndex; }
-                    }
+                    int island = islandFieldProcessors.GetIsland(sectorToCheck, local1d);
+                    if (island != desiredIsland) { continue; }
+                    int2 curGeneralIndex = FlowFieldUtilities.GetGeneral2d(local1d, sectorToCheck, sectorMatrixColAmount, sectorColAmount);
+                    float2 curIndexPos = FlowFieldUtilities.IndexToPos(curGeneralIndex, tileSize, fieldGridStartPos);
+                    float newExtensionDistance = math.distance(curIndexPos, destination);
+                    if (newExtensionDistance < currentExtensionIndexDistance) { currentExtensionIndexDistance = newExtensionDistance; currentExtensionLocalIndex = local1d; }
+
                 }
                 return new ExtensionIndex()
                 {
                     SectorIndex = sectorToCheck,
-                    LocalIndex = currentExtensionIndexLocalIndex,
+                    LocalIndex = currentExtensionLocalIndex,
                     Distance = currentExtensionIndexDistance
                 };
             }
@@ -257,32 +434,25 @@ namespace FlowFieldNavigation
                     if (islandOut != desiredIsland) { return new ExtensionIndex() { Distance = float.MaxValue }; }
                 }
                 float currentExtensionIndexDistance = float.MaxValue;
-                int currentExtensionIndexLocalIndex = 0;
-                int sectorCostStartIndex = sectorToCheck * sectorTileAmount;
-                int startLocal = rowToStart * sectorColAmount + colToCheck;
-                int checkRange = rowToEnd - rowToStart + 1;
-                int checkCount = math.abs(checkRange);
-                int checkCountNonZero = math.select(checkCount, 1, checkCount == 0);
-                int checkUnit = checkRange / checkCountNonZero;
-
-                int startIndex = sectorCostStartIndex + startLocal;
-                for (int i = 0; i < checkCount; i++)
+                int currentExtensionLocalIndex = 0;
+                for(int r = rowToStart; r <= rowToEnd; r++)
                 {
-                    int indexToCheck = startIndex + i * sectorColAmount * checkUnit;
-                    int localIndex = indexToCheck - sectorCostStartIndex;
-                    byte cost = costField[indexToCheck];
-                    if (cost == byte.MaxValue) { continue; }
-                    int island = islandFieldProcessors.GetIsland(sectorToCheck, localIndex);
-                    if (island == desiredIsland)
-                    {
-                        float newExtensionCost = FlowFieldUtilities.GetCostBetween(sectorToCheck, localIndex, destinationSector, destinationLocalIndex, sectorColAmount, sectorMatrixColAmount);
-                        if (newExtensionCost < currentExtensionIndexDistance) { currentExtensionIndexDistance = newExtensionCost; currentExtensionIndexLocalIndex = localIndex; }
-                    }
+                    int2 local2d = new int2(colToCheck, r);
+                    int local1d = FlowFieldUtilities.To1D(local2d, sectorColAmount);
+                    int costFieldIndex = sectorToCheck * sectorTileAmount + local1d;
+                    byte cost = costField[costFieldIndex];
+                    if(cost == byte.MaxValue) { continue; }
+                    int island = islandFieldProcessors.GetIsland(sectorToCheck, local1d);
+                    if(island != desiredIsland) { continue; }
+                    int2 curGeneralIndex = FlowFieldUtilities.GetGeneral2d(local1d, sectorToCheck, sectorMatrixColAmount, sectorColAmount);
+                    float2 curIndexPos = FlowFieldUtilities.IndexToPos(curGeneralIndex, tileSize, fieldGridStartPos);
+                    float newExtensionDistance = math.distance(curIndexPos, destination);
+                    if (newExtensionDistance < currentExtensionIndexDistance) { currentExtensionIndexDistance = newExtensionDistance; currentExtensionLocalIndex = local1d; }
                 }
                 return new ExtensionIndex()
                 {
                     SectorIndex = sectorToCheck,
-                    LocalIndex = currentExtensionIndexLocalIndex,
+                    LocalIndex = currentExtensionLocalIndex,
                     Distance = currentExtensionIndexDistance
                 };
             }
