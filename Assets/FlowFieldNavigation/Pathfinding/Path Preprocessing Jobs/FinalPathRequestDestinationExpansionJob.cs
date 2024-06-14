@@ -58,7 +58,8 @@ namespace FlowFieldNavigation
                     pickedFinalRequests[index] = request;
                     continue;
                 }
-                float2 newDestination = ClosestIndexWithIslandQuery.GetClosestIndexWithIsland(
+                int2 oldGoalIndex = destination2d;
+                int2 newGoalIndex = ClosestIndexWithIslandQuery.GetClosestIndexWithIsland(
                     request.Destination,
                     sourceIsland,
                     TileSize,
@@ -71,7 +72,9 @@ namespace FlowFieldNavigation
                     FieldColAmount,
                     islandProcessor,
                     CostFields[request.Offset]);
-                request.Destination = newDestination;
+                float2 newGoalPos = FlowFieldUtilities.IndexToPos(newGoalIndex, TileSize, FieldGridStartPos);
+                newGoalPos = math.select(newGoalPos, request.Destination, newGoalIndex.Equals(oldGoalIndex));
+                request.Destination = newGoalPos;
                 pickedFinalRequests[index] = request;
             }
         }

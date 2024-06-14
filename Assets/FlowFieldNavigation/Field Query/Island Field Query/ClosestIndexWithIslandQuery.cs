@@ -4,7 +4,7 @@ namespace FlowFieldNavigation
 {
     internal static class ClosestIndexWithIslandQuery
     {
-        internal static float2 GetClosestIndexWithIsland(
+        internal static int2 GetClosestIndexWithIsland(
             float2 position,
             int desiredIsland,
             float tileSize,
@@ -18,7 +18,7 @@ namespace FlowFieldNavigation
             IslandFieldProcessor islandFieldProcessors,
             UnsafeListReadOnly<byte> costField)
         {
-            float2 foundPosition = GetClosestIndexAtIsland(
+            int2 foundIndex = GetClosestIndexAtIsland(
                 position,
                 desiredIsland,
                 tileSize,
@@ -32,12 +32,12 @@ namespace FlowFieldNavigation
                 islandFieldProcessors,
                 costField,
                 out int2 lastTopLeft, out int2 lastTopRight, out int2 lastBotLeft, out int2 lastBotRight);
-            foundPosition = MakeSureExpandedDestinationIsClosest(
+             foundIndex = MakeSureExpandedDestinationIsClosest(
                 lastBotLeft,
                 lastBotRight,
                 lastTopLeft,
                 lastTopRight,
-                foundPosition,
+                foundIndex,
                 position,
                 desiredIsland,
                 tileSize,
@@ -49,10 +49,10 @@ namespace FlowFieldNavigation
                 sectorTileAmount,
                 costField,
                 islandFieldProcessors);
-            return foundPosition;
+            return foundIndex;
         }
-        static float2 GetClosestIndexAtIsland(
-            float2 position,
+        static int2 GetClosestIndexAtIsland(
+            float2 initialPosition,
             int desiredIsland,
             float tileSize,
             float2 fieldGridStartPos,
@@ -70,7 +70,7 @@ namespace FlowFieldNavigation
             out int2 lastBotRight)
         {
 
-            int2 destinationIndex = FlowFieldUtilities.PosTo2D(position, tileSize, fieldGridStartPos);
+            int2 destinationIndex = FlowFieldUtilities.PosTo2D(initialPosition, tileSize, fieldGridStartPos);
             LocalIndex1d destinationLocal = FlowFieldUtilities.GetLocal1D(destinationIndex, sectorColAmount, sectorMatrixColAmount);
             int destinationLocalIndex = destinationLocal.index;
             int destinationSector = destinationLocal.sector;
@@ -104,7 +104,7 @@ namespace FlowFieldNavigation
                     lastBotLeft = botLeft;
                     lastTopRight = topRight;
                     lastBotRight = botRight;
-                    return position;
+                    return FlowFieldUtilities.PosTo2D(initialPosition, tileSize, fieldGridStartPos);
                 }
 
                 if (topOverflow)
@@ -198,13 +198,13 @@ namespace FlowFieldNavigation
                 }
                 offset++;
             }
-
-            int2 outputGeneral2d = FlowFieldUtilities.GetGeneral2d(pickedExtensionIndexLocalIndex, pickedExtensionIndexSector, sectorMatrixColAmount, sectorColAmount);
             lastTopLeft = topLeft;
             lastBotLeft = botLeft;
             lastTopRight = topRight;
             lastBotRight = botRight;
-            return FlowFieldUtilities.IndexToPos(outputGeneral2d, tileSize, fieldGridStartPos);
+
+            int2 outputGeneral2d = FlowFieldUtilities.GetGeneral2d(pickedExtensionIndexLocalIndex, pickedExtensionIndexSector, sectorMatrixColAmount, sectorColAmount);
+            return outputGeneral2d;
 
             ExtensionIndex CheckSectorRow(int sectorToCheck, int rowToCheck, int colToStart, int colToEnd)
             {
@@ -225,7 +225,7 @@ namespace FlowFieldNavigation
                     if (island != desiredIsland) { continue; }
                     int2 curGeneralIndex = FlowFieldUtilities.GetGeneral2d(local1d, sectorToCheck, sectorMatrixColAmount, sectorColAmount);
                     float2 curIndexPos = FlowFieldUtilities.IndexToPos(curGeneralIndex, tileSize, fieldGridStartPos);
-                    float newExtensionDistance = math.distance(curIndexPos, position);
+                    float newExtensionDistance = math.distance(curIndexPos, initialPosition);
                     if (newExtensionDistance < currentExtensionIndexDistance) { currentExtensionIndexDistance = newExtensionDistance; currentExtensionLocalIndex = local1d; }
 
                 }
@@ -255,7 +255,7 @@ namespace FlowFieldNavigation
                     if (island != desiredIsland) { continue; }
                     int2 curGeneralIndex = FlowFieldUtilities.GetGeneral2d(local1d, sectorToCheck, sectorMatrixColAmount, sectorColAmount);
                     float2 curIndexPos = FlowFieldUtilities.IndexToPos(curGeneralIndex, tileSize, fieldGridStartPos);
-                    float newExtensionDistance = math.distance(curIndexPos, position);
+                    float newExtensionDistance = math.distance(curIndexPos, initialPosition);
                     if (newExtensionDistance < currentExtensionIndexDistance) { currentExtensionIndexDistance = newExtensionDistance; currentExtensionLocalIndex = local1d; }
                 }
                 return new ExtensionIndex()
@@ -267,12 +267,12 @@ namespace FlowFieldNavigation
             }
         }
 
-        static float2 MakeSureExpandedDestinationIsClosest(
+        static int2 MakeSureExpandedDestinationIsClosest(
             int2 lastBotLeft,
             int2 lastBotRight,
             int2 lastTopLeft,
             int2 lastTopRight,
-            float2 pickedPosition,
+            int2 finishedIndex,
             float2 goalPosition,
             int desiredIsland,
             float tileSize,
@@ -285,7 +285,8 @@ namespace FlowFieldNavigation
             UnsafeListReadOnly<byte> costField,
             IslandFieldProcessor islandFieldProcessor)
         {
-            float curGoalDistSq = math.distancesq(pickedPosition, goalPosition);
+            float2 finishedIndexCenter = FlowFieldUtilities.IndexToPos(finishedIndex, tileSize, fieldGridStartPos);
+            float curGoalDistSq = math.distancesq(finishedIndexCenter, goalPosition);
             float curGoalDist = math.sqrt(curGoalDistSq);
 
             int topSearchStartRow = math.min(fieldRowAmount - 1, lastTopLeft.y + 1);
@@ -321,7 +322,7 @@ namespace FlowFieldNavigation
             bool leftExhausted = false;
 
             bool exhausted = false;
-            float2 foundPosition = pickedPosition;
+            float2 foundPosition = finishedIndexCenter;
             while (!exhausted)
             {
                 topExhausted = topSearchEndRow < curTopSearchRow;
@@ -387,7 +388,7 @@ namespace FlowFieldNavigation
                 curRightSearchCol++;
                 curLeftSearchCol--;
             }
-            return foundPosition;
+            return FlowFieldUtilities.PosTo2D(foundPosition, tileSize, fieldGridStartPos);
             bool IndexSuitable(int2 curIndex, out float2 indexPos, out float indexGoalDistSq)
             {
                 indexPos = FlowFieldUtilities.IndexToPos(curIndex, tileSize, fieldGridStartPos);
