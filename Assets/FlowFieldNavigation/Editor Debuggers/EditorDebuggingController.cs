@@ -32,7 +32,8 @@ namespace FlowFieldNavigation
         [Header("PathDebugger")]
         [SerializeField] bool _debugIslandSeed;
         [SerializeField] bool _debugPathUpdateSeed;
-        [SerializeField] bool _debugDestination;
+        [SerializeField] bool _debugGoal;
+        [SerializeField] bool _debugDesiredGoal;
         [SerializeField] bool _debugActiveWaveFronts;
         [SerializeField] bool _debugPortalTraversalMarks;
         [SerializeField] bool _debugPortalTargetNeighbours;
@@ -77,6 +78,7 @@ namespace FlowFieldNavigation
         TileCenterHeightBuilder _tileCenterHeightBuilder;
         SectorCornerHeightBuilder _sectorCornerHeightBuilder;
         GoalIndexDebugMeshBuilder _goalIndexDebugMeshBuilder;
+        GoalIndexDebugMeshBuilder _desiredGoalIndexDebugMeshBuilder;
         private void Start()
         {
             _overlayCamera = GetComponent<Camera>();
@@ -97,8 +99,9 @@ namespace FlowFieldNavigation
             _tileCenterHeightBuilder = new TileCenterHeightBuilder(_navigationManager);
             _sectorCornerHeightBuilder = new SectorCornerHeightBuilder(_navigationManager);
             _goalIndexDebugMeshBuilder = new GoalIndexDebugMeshBuilder(_navigationManager);
+            _desiredGoalIndexDebugMeshBuilder = new GoalIndexDebugMeshBuilder(_navigationManager);
             _navVolDebugger = new EditorNavigationVolumeDebugger(_navigationManager);
-            _pathGoalDebugger = new EditorPathGoalDebugger(_navigationManager, _goalIndexDebugMeshBuilder);
+            _pathGoalDebugger = new EditorPathGoalDebugger(_navigationManager, _goalIndexDebugMeshBuilder, _desiredGoalIndexDebugMeshBuilder);
         }
         private void Update()
         {
@@ -140,7 +143,8 @@ namespace FlowFieldNavigation
                 if (_debugPortalSequence) { _pathDebugger.DebugPortalSequence(AgentToDebug, _portalHeightBuilder.GetPortalHeights(_costFieldOffset)); }
                 if (_debugIntegrationField) { _pathDebugger.DebugIntegrationField(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
                 if (_debugFlowField) { _pathDebugger.DebugFlowField(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
-                if (_debugDestination) { _pathGoalDebugger.DebugGoal(AgentToDebug); }
+                if (_debugGoal) { _pathGoalDebugger.DebugGoal(AgentToDebug); }
+                if (_debugDesiredGoal) { _pathGoalDebugger.DebugDesiredGoal(AgentToDebug, _debugGoal); }
                 if (_debugDynamicAreaIntegration) { _pathDebugger.DebugDynamicAreaIntegration(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
                 if (_debugDynamicAreaFlow) { _pathDebugger.DebugDynamicAreaFlow(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
                 if (_debugPickedSectors) { _pathDebugger.DebugPickedSectors(AgentToDebug, _sectorCornerHeightBuilder.GetSectorCornerHeights()); }
