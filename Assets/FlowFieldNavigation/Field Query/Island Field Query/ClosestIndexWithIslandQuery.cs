@@ -5,7 +5,7 @@ namespace FlowFieldNavigation
     internal static class ClosestIndexWithIslandQuery
     {
         internal static int2 GetClosestIndexWithIsland(
-            float2 position,
+            float2 initialPoint,
             int desiredIsland,
             float tileSize,
             float2 fieldGridStartPos,
@@ -19,7 +19,7 @@ namespace FlowFieldNavigation
             UnsafeListReadOnly<byte> costField)
         {
             int2 foundIndex = GetClosestIndexAtIsland(
-                position,
+                initialPoint,
                 desiredIsland,
                 tileSize,
                 fieldGridStartPos,
@@ -38,7 +38,7 @@ namespace FlowFieldNavigation
                 lastTopLeft,
                 lastTopRight,
                 foundIndex,
-                position,
+                initialPoint,
                 desiredIsland,
                 tileSize,
                 fieldGridStartPos,
