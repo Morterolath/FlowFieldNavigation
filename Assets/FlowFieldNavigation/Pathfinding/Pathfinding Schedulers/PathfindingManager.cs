@@ -247,6 +247,7 @@ namespace FlowFieldNavigation
                 FieldMaxYExcluding = FlowFieldUtilities.FieldMaxYExcluding,
                 FieldMinXIncluding = FlowFieldUtilities.FieldMinXIncluding,
                 FieldMinYIncluding = FlowFieldUtilities.FieldMinYIncluding,
+                PathIslandSeedsAsFieldIndices = pathIslandSeedsAsFieldIndex,
                 PathStateArray = pathStateArray,
                 AgentPositions = _agentPositions.AsArray(),
                 PathDestinationDataArray = pathDestinationDataArray,

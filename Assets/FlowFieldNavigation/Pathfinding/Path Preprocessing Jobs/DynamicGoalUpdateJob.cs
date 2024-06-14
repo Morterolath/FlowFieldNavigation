@@ -20,6 +20,7 @@ namespace FlowFieldNavigation
         internal float FieldMaxXExcluding;
         internal float FieldMaxYExcluding;
         internal float2 FieldGridStartPos;
+        [ReadOnly] internal NativeArray<int> PathIslandSeedsAsFieldIndices;
         [ReadOnly] internal NativeArray<PathState> PathStateArray;
         [ReadOnly] internal NativeArray<float3> AgentPositions;
         [ReadOnly] internal NativeArray<IslandFieldProcessor> IslandFieldProcessors;
@@ -57,7 +58,13 @@ namespace FlowFieldNavigation
                 int2 newDestinationIndex = FlowFieldUtilities.PosTo2D(newDestination, TileSize, FieldGridStartPos);
                 LocalIndex1d newDestinationLocal = FlowFieldUtilities.GetLocal1D(newDestinationIndex, SectorColAmount, SectorMatrixColAmount);
                 byte newDestinationCost = costs[newDestinationLocal.sector * SectorTileAmount + newDestinationLocal.index];
-                int oldDestinationIsland = islandFieldProcessor.GetIsland(oldDestinationIndex);
+
+
+                //Get old and new islands
+
+                int islandSeedAsFieldIndex = PathIslandSeedsAsFieldIndices[index];
+                int2 islandSeed2d = FlowFieldUtilities.To2D(islandSeedAsFieldIndex, FieldColAmount);
+                int oldDestinationIsland = islandFieldProcessor.GetIsland(islandSeed2d);
                 int newDestinationIsland = islandFieldProcessor.GetIsland(newDestinationIndex);
 
                 //Test
