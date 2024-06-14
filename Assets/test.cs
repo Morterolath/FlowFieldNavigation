@@ -20,7 +20,6 @@ namespace Assets
     {
 
         [SerializeField] int size;
-        [SerializeField] int batch;
         private void Start()
         {
         }

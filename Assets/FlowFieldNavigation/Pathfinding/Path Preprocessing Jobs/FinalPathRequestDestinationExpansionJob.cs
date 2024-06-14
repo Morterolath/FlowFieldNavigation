@@ -72,9 +72,15 @@ namespace FlowFieldNavigation
                     FieldColAmount,
                     islandProcessor,
                     CostFields[request.Offset]);
+                //Handle if new goal index close enough to desired goal
                 float2 newGoalPos = FlowFieldUtilities.IndexToPos(newGoalIndex, TileSize, FieldGridStartPos);
-                newGoalPos = math.select(newGoalPos, request.Destination, newGoalIndex.Equals(oldGoalIndex));
-                request.Destination = newGoalPos;
+                bool newGoalSameAsOld = newGoalIndex.Equals(oldGoalIndex);
+                bool newGoalCloseEnough = math.distance(request.Destination, newGoalPos) <= request.Range;
+                if(!(newGoalSameAsOld || newGoalCloseEnough))
+                {
+                    request.Destination = newGoalPos;
+                    request.Range = 0f;
+                }
                 pickedFinalRequests[index] = request;
             }
         }

@@ -61,7 +61,6 @@ namespace FlowFieldNavigation
 
 
                 //Get old and new islands
-
                 int islandSeedAsFieldIndex = PathIslandSeedsAsFieldIndices[index];
                 int2 islandSeed2d = FlowFieldUtilities.To2D(islandSeedAsFieldIndex, FieldColAmount);
                 int oldDestinationIsland = islandFieldProcessor.GetIsland(islandSeed2d);

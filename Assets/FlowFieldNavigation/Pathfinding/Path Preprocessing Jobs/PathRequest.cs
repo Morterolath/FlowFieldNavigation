@@ -98,6 +98,7 @@ namespace FlowFieldNavigation
         internal int FlockIndex;
         internal bool ReconstructionFlag;
         internal float Range;
+        internal float DesiredRange;
 
         internal FinalPathRequest(OffsetDerivedPathRequest derivedReq, int sourceIsland)
         {
@@ -110,6 +111,7 @@ namespace FlowFieldNavigation
             FlockIndex = derivedReq.FlockIndex;
             ReconstructionFlag = derivedReq.ReconstructionFlag;
             Range = derivedReq.Range;
+            DesiredRange = derivedReq.Range;
 
             SourceCount = 0;
             SourcePositionStartIndex = 0;

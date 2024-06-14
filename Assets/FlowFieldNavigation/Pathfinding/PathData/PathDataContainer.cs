@@ -266,7 +266,7 @@ namespace FlowFieldNavigation
                 SectorOverlappingDirectionTableList.Add(sectorOverlappingDirections);
                 SectorToFlowStartTables.Add(new NativeArray<int>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent));
                 PathRanges.Add(request.Range);
-                PathDesiredRanges.Add(request.Range);
+                PathDesiredRanges.Add(request.DesiredRange);
                 PathGoalNeighbourIndexToGoalIndexMaps.Add(new NativeHashMap<int, int>(0, Allocator.Persistent));
                 PathGoalTraversalDataFieldIndexLists.Add(new NativeList<int>(Allocator.Persistent));
                 PathAlreadyConsideredSectorIndexMaps.Add(new NativeHashSet<int>(0, Allocator.Persistent));
@@ -285,7 +285,7 @@ namespace FlowFieldNavigation
                 SectorOverlappingDirectionTableList[pathIndex] = sectorOverlappingDirections;
                 SectorToFlowStartTables[pathIndex] = new NativeArray<int>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent);
                 PathRanges[pathIndex] = request.Range;
-                PathDesiredRanges[pathIndex] = request.Range;
+                PathDesiredRanges[pathIndex] = request.DesiredRange;
                 PathGoalNeighbourIndexToGoalIndexMaps[pathIndex] = new NativeHashMap<int, int>(0, Allocator.Persistent);
                 PathGoalTraversalDataFieldIndexLists[pathIndex] = new NativeList<int>(Allocator.Persistent);
                 PathAlreadyConsideredSectorIndexMaps[pathIndex] = new NativeHashSet<int>(0, Allocator.Persistent);
