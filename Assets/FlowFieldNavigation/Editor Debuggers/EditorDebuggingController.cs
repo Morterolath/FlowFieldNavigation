@@ -30,6 +30,7 @@ namespace FlowFieldNavigation
         [SerializeField] bool _debugHeightMesh;
         [SerializeField] bool _debugGridBorders;
         [Header("PathDebugger")]
+        [SerializeField] bool _debugLosBlocks;
         [SerializeField] bool _debugIslandSeed;
         [SerializeField] bool _debugPathUpdateSeed;
         [SerializeField] bool _debugGoal;
@@ -152,6 +153,7 @@ namespace FlowFieldNavigation
                 if (_debugActiveWaveFronts) { _pathDebugger.DebugActiveWaveFronts(AgentToDebug); }
                 if (_debugPathUpdateSeed) { _pathDebugger.DebugPathUpdateSeeds(AgentToDebug); }
                 if (_debugIslandSeed) { _pathDebugger.DebugIslandSeed(AgentToDebug); }
+                if (_debugLosBlocks) { _pathDebugger.DebugLOSBlocks(AgentToDebug); }
             }
 
         }

@@ -8,6 +8,7 @@ using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Jobs;
+using static Codice.Client.Common.WebApi.WebApiEndpoints;
 
 namespace FlowFieldNavigation
 {
@@ -35,6 +36,34 @@ namespace FlowFieldNavigation
             _navigationManager = navigationManager;
             _fieldProducer = navigationManager.FieldDataContainer;
             _tileSize = FlowFieldUtilities.TileSize;
+        }
+        internal void DebugLOSBlocks(FlowFieldAgent agent)
+        {
+            int pathIndex = agent.GetPathIndex();
+            if (pathIndex == -1) { return; }
+
+            Gizmos.color = Color.white;
+            NativeArray<IntegrationTile> integrationTile = _navigationManager.PathDataContainer.PathfindingInternalDataList[pathIndex].IntegrationField.AsArray();
+            NativeArray<int> pickedSectors = _navigationManager.PathDataContainer.PathfindingInternalDataList[pathIndex].PickedSectorList.AsArray();
+            NativeArray<int> sectorToIntegrationStart = _navigationManager.PathDataContainer.SectorToFlowStartTables[pathIndex];
+
+            for(int i = 0; i < pickedSectors.Length; i++)
+            {
+                int sector = pickedSectors[i];
+                int sectorIntStart = sectorToIntegrationStart[sector];
+                for(int j = 0; j < FlowFieldUtilities.SectorTileAmount; j++)
+                {
+                    bool isLosBlock = (integrationTile[sectorIntStart + j].Mark & IntegrationMark.LOSBlock) == IntegrationMark.LOSBlock;
+                    if (isLosBlock)
+                    {
+                        int2 index2d = FlowFieldUtilities.GetGeneral2d(j, sector, FlowFieldUtilities.SectorMatrixColAmount, FlowFieldUtilities.SectorColAmount);
+                        float2 indexPos = FlowFieldUtilities.IndexToPos(index2d, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
+                        float height = _navigationManager.HeightMeshImmediateQueryManager.GetHeightBurst(indexPos);
+                        float3 indexpos3 = new float3(indexPos.x, height, indexPos.y);
+                        Gizmos.DrawCube(indexpos3, new Vector3(0.3f, 0.3f, 0.3f));
+                    }
+                }
+            }
         }
         internal void DebugIslandSeed(FlowFieldAgent agent)
         {
