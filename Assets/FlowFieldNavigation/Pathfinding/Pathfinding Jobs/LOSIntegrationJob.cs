@@ -316,7 +316,8 @@ namespace FlowFieldNavigation
                 float tileDistSq = dx * dx + dy * dy;
                 float tileXIncDistSq = (dx + tileSize) * (dx + tileSize) + dy * dy;
                 float tileYIncDistSq = dx * dx + (dy + tileSize) * (dy + tileSize);
-                return tileDistSq <= goalRangeSq && (tileXIncDistSq > goalRangeSq || tileYIncDistSq > goalRangeSq);
+                bool goalItself = tileGeneral2d.Equals(targetGeneral2d);
+                return (tileDistSq <= goalRangeSq || goalItself) && (tileXIncDistSq > goalRangeSq || tileYIncDistSq > goalRangeSq);
             }
 
             void RefreshOrthogonalTiles()
