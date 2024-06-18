@@ -70,7 +70,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Radius: 0.48
-  Speed: 5
+  Speed: 0
   LandOffset: 0
 --- !u!1001 &5850989375783227942
 PrefabInstance:

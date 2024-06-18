@@ -7,6 +7,7 @@ using UnityEngine;
 using Unity.Burst;
 using Unity.VisualScripting;
 using static Unity.Burst.Intrinsics.X86;
+using UnityEngine.Profiling;
 
 namespace FlowFieldNavigation
 {
@@ -27,6 +28,7 @@ namespace FlowFieldNavigation
         internal int SectorTileAmount;
 
         [ReadOnly] internal NativeArray<byte> Costs;
+        [ReadOnly] internal NativeHashSet<int> PossibleGoalSectors;
         internal NativeArray<int> SectorToPicked;
         internal NativeArray<IntegrationTile> IntegrationField;
         public void Execute()
@@ -46,7 +48,7 @@ namespace FlowFieldNavigation
             NativeQueue<LocalIndex1d> integrationQueue = new NativeQueue<LocalIndex1d>(Allocator.Temp);
             NativeArray<byte> costs = Costs;
             NativeArray<IntegrationTile> integrationField = IntegrationField;
-
+            NativeHashSet<int> possibleGoalSectors = PossibleGoalSectors;
 
             //LOOKUP TABLE
             int curLocal1d;
@@ -112,26 +114,34 @@ namespace FlowFieldNavigation
             IntegrationTile seTile;
             IntegrationTile swTile;
             IntegrationTile nwTile;
+            bool nWithinGoalRange;
+            bool eWithinGoalRange;
+            bool sWithinGoalRange;
+            bool wWithinGoalRange;
+            bool neWithinGoalRange;
+            bool seWithinGoalRange;
+            bool swWithinGoalRange;
+            bool nwWithinGoalRange;
 
-            //INNITIAL STEP
-            int2 targetSector2d = FlowFieldUtilities.GetSector2D(Target, sectorColAmount);
-            int2 targetSectorStart = FlowFieldUtilities.GetSectorStartIndex(targetSector2d, sectorColAmount);
-            int targetLocal1d = FlowFieldUtilities.GetLocal1D(Target, targetSectorStart, sectorColAmount);
-            int targetSector1d = FlowFieldUtilities.To1D(targetSector2d, sectorMatrixColAmount);
-            int targetSectorMark = sectorToPickedTable[targetSector1d];
-            LocalIndex1d targetLocal = new LocalIndex1d()
+            NativeArray<int> rangeBorderIndices = GetRangeBorderTiles();
+            for(int i = 0; i < rangeBorderIndices.Length; i++)
             {
-                sector = targetSector1d,
-                index = targetLocal1d,
-            };
-            integrationQueue.Enqueue(targetLocal);
-            IntegrationTile targetTile = IntegrationField[targetSectorMark + targetLocal1d];
-            IntegrationField[targetSectorMark + targetLocal1d] = new IntegrationTile()
+                TestBorderLOSC(rangeBorderIndices[i]);
+            }
+            for(int i = 0; i< rangeBorderIndices.Length; i++)
             {
-                Cost = targetTile.Cost,
-                Mark = IntegrationMark.LOSPass,
-            };
-
+                int tile = rangeBorderIndices[i];
+                LocalIndex1d tileLocal = FlowFieldUtilities.GetLocal1D(tile, fieldColAmount, sectorColAmount, sectorMatrixColAmount);
+                bool isUnwalkable = costs[tileLocal.sector * sectorTileAmount + tileLocal.index] == byte.MaxValue;
+                if (isUnwalkable) { continue; }
+                int sectorIntegrationStartIndex = SectorToPicked[tileLocal.sector];
+                IntegrationTile integrationTile = integrationField[sectorIntegrationStartIndex + tileLocal.index];
+                if((integrationTile.Mark & IntegrationMark.LOSBlock) == IntegrationMark.LOSBlock) { continue; }
+                integrationTile.Mark |= IntegrationMark.LOSPass;
+                integrationField[sectorIntegrationStartIndex + tileLocal.index] = integrationTile;
+                integrationQueue.Enqueue(tileLocal);
+            }
+            
             //LOOP
             while (!integrationQueue.IsEmpty())
             {
@@ -143,6 +153,31 @@ namespace FlowFieldNavigation
                 }
                 EnqueueNeighbours();
             }
+            NativeArray<int> GetRangeBorderTiles()
+            {
+                NativeList<int> borderTiles = new NativeList<int>(Allocator.Temp);
+                NativeHashSet<int>.Enumerator possibleGoalSectorEnumerator = possibleGoalSectors.GetEnumerator();
+                while (possibleGoalSectorEnumerator.MoveNext())
+                {
+                    int sector = possibleGoalSectorEnumerator.Current;
+                    if (sectorToPickedTable[sector] == 0) { continue; }
+                    int2 sector2d = FlowFieldUtilities.To2D(sector, sectorMatrixColAmount);
+                    int2 sectorStart2d = FlowFieldUtilities.GetSectorStartIndex(sector2d, sectorColAmount);
+                    for(int r = 0; r < sectorColAmount; r++)
+                    {
+                        for(int c = 0; c < sectorColAmount; c++)
+                        {
+                            int2 curTile = sectorStart2d + new int2(c, r);
+                            if (IsRangeBorder(curTile))
+                            {
+                                borderTiles.Add(FlowFieldUtilities.To1D(curTile, fieldColAmount));
+                            }
+                        }
+                    }
+                }
+                return borderTiles.AsArray();
+            }
+
 
             void SetLookupTable(LocalIndex1d curIndex)
             {
@@ -256,43 +291,24 @@ namespace FlowFieldNavigation
                 float nwDist = math.distance(nwPos, goal);
 
                 //Tile within range
-                bool nWithinRange = nDist <= goalRange;
-                bool eWithinRange = eDist <= goalRange;
-                bool sWithinRange = sDist <= goalRange;
-                bool wWithinRange = wDist <= goalRange;
-                bool neWithinRange = neDist <= goalRange;
-                bool seWithinRange = seDist <= goalRange;
-                bool swWithinRange = swDist <= goalRange;
-                bool nwWithinRange = nwDist <= goalRange;
-
-                //Tile range border
-                bool nRangeBorder = IsRangeBorder(nGeneral2d);
-                bool eRangeBorder = IsRangeBorder(eGeneral2d);
-                bool sRangeBorder = IsRangeBorder(sGeneral2d);
-                bool wRangeBorder = IsRangeBorder(wGeneral2d);
-                bool neRangeBorder = IsRangeBorder(neGeneral2d);
-                bool seRangeBorder = IsRangeBorder(seGeneral2d);
-                bool swRangeBorder = IsRangeBorder(swGeneral2d);
-                bool nwRangeBorder = IsRangeBorder(nwGeneral2d);
+                nWithinGoalRange = nDist <= goalRange;
+                eWithinGoalRange = eDist <= goalRange;
+                sWithinGoalRange = sDist <= goalRange;
+                wWithinGoalRange = wDist <= goalRange;
+                neWithinGoalRange = neDist <= goalRange;
+                seWithinGoalRange = seDist <= goalRange;
+                swWithinGoalRange = swDist <= goalRange;
+                nwWithinGoalRange = nwDist <= goalRange;
 
                 //COSTS
-                bool nCostUnwalkable = costs[nSector1d * sectorTileAmount + nLocal1d] == byte.MaxValue;
-                bool eCostUnwalkable = costs[eSector1d * sectorTileAmount + eLocal1d] == byte.MaxValue;
-                bool sCostUnwalkable = costs[sSector1d * sectorTileAmount + sLocal1d] == byte.MaxValue;
-                bool wCostUnwalkable = costs[wSector1d * sectorTileAmount + wLocal1d] == byte.MaxValue;
-                bool neCostUnwalkable = costs[neSector1d * sectorTileAmount + neLocal1d] == byte.MaxValue;
-                bool seCostUnwalkable = costs[seSector1d * sectorTileAmount + seLocal1d] == byte.MaxValue;
-                bool swCostUnwalkable = costs[swSector1d * sectorTileAmount + swLocal1d] == byte.MaxValue;
-                bool nwCostUnwalkable = costs[nwSector1d * sectorTileAmount + nwLocal1d] == byte.MaxValue;
-
-                nUnwalkable = (nCostUnwalkable && !nWithinRange) || nBorder || (nCostUnwalkable && nRangeBorder);
-                eUnwalkable = (eCostUnwalkable && !eWithinRange) || eBorder || (eCostUnwalkable && eRangeBorder);
-                sUnwalkable = (sCostUnwalkable && !sWithinRange) || sBorder || (sCostUnwalkable && sRangeBorder);
-                wUnwalkable = (wCostUnwalkable && !wWithinRange) || wBorder || (wCostUnwalkable && wRangeBorder);
-                neUnwalkable = (neCostUnwalkable && !neWithinRange) || neBorder || (neCostUnwalkable && neRangeBorder);
-                seUnwalkable = (seCostUnwalkable && !seWithinRange) || seBorder || (seCostUnwalkable && seRangeBorder);
-                swUnwalkable = (swCostUnwalkable && !swWithinRange) || swBorder || (swCostUnwalkable && swRangeBorder);
-                nwUnwalkable = (nwCostUnwalkable && !nwWithinRange) || nwBorder || (nwCostUnwalkable && nwRangeBorder);
+                nUnwalkable = costs[nSector1d * sectorTileAmount + nLocal1d] == byte.MaxValue;
+                eUnwalkable = costs[eSector1d * sectorTileAmount + eLocal1d] == byte.MaxValue;
+                sUnwalkable = costs[sSector1d * sectorTileAmount + sLocal1d] == byte.MaxValue;
+                wUnwalkable = costs[wSector1d * sectorTileAmount + wLocal1d] == byte.MaxValue;
+                neUnwalkable = costs[neSector1d * sectorTileAmount + neLocal1d] == byte.MaxValue;
+                seUnwalkable = costs[seSector1d * sectorTileAmount + seLocal1d] == byte.MaxValue;
+                swUnwalkable = costs[swSector1d * sectorTileAmount + swLocal1d] == byte.MaxValue;
+                nwUnwalkable = costs[nwSector1d * sectorTileAmount + nwLocal1d] == byte.MaxValue;
 
                 //TILES
                 nTile = integrationField[nSectorMark + nLocal1d];
@@ -330,10 +346,10 @@ namespace FlowFieldNavigation
 
             void EnqueueNeighbours()
             {
-                bool nEnqueueable = nTile.Mark == IntegrationMark.None && !nUnwalkable && nSectorMark != 0 && nDistance <= maxLosRange;
-                bool eEnqueueable = eTile.Mark == IntegrationMark.None && !eUnwalkable && eSectorMark != 0 && eDistance <= maxLosRange;
-                bool sEnqueueable = sTile.Mark == IntegrationMark.None && !sUnwalkable && sSectorMark != 0 && sDistance <= maxLosRange;
-                bool wEnqueueable = wTile.Mark == IntegrationMark.None && !wUnwalkable && wSectorMark != 0 && wDistance <= maxLosRange;
+                bool nEnqueueable = nTile.Mark == IntegrationMark.None && !nUnwalkable && nSectorMark != 0 && nDistance <= maxLosRange && !nWithinGoalRange;
+                bool eEnqueueable = eTile.Mark == IntegrationMark.None && !eUnwalkable && eSectorMark != 0 && eDistance <= maxLosRange && !eWithinGoalRange;
+                bool sEnqueueable = sTile.Mark == IntegrationMark.None && !sUnwalkable && sSectorMark != 0 && sDistance <= maxLosRange && !sWithinGoalRange;
+                bool wEnqueueable = wTile.Mark == IntegrationMark.None && !wUnwalkable && wSectorMark != 0 && wDistance <= maxLosRange && !wWithinGoalRange;
 
                 if (nEnqueueable)
                 {
@@ -380,48 +396,188 @@ namespace FlowFieldNavigation
                 int maxComponent = math.max(dif.x, dif.y);
                 return minComponent * 1.4f + (maxComponent - minComponent);
             }
+            void TestBorderLOSC(int tileGeneral)
+            {
+                int2 curTileGeneral2d = FlowFieldUtilities.To2D(tileGeneral, fieldColAmount);
+                LocalIndex1d curLocal = FlowFieldUtilities.GetLocal1D(curTileGeneral2d, sectorColAmount, sectorMatrixColAmount);
+                curLocal1d = curLocal.index;
+                curSector1d = curLocal.sector;
+                bool curUnwalkable = costs[curLocal.sector * sectorTileAmount + curLocal.index] == byte.MaxValue;
+                if (!curUnwalkable) { return; };
+                nLocal1d = curLocal1d + sectorColAmount;
+                eLocal1d = curLocal1d + 1;
+                sLocal1d = curLocal1d - sectorColAmount;
+                wLocal1d = curLocal1d - 1;
+                neLocal1d = nLocal1d + 1;
+                seLocal1d = sLocal1d + 1;
+                swLocal1d = sLocal1d - 1;
+                nwLocal1d = nLocal1d - 1;
 
+                //LOCAL OVERFLOWS
+                bool nLocalOverflow = nLocal1d >= sectorTileAmount;
+                bool eLocalOverflow = (eLocal1d % sectorColAmount) == 0;
+                bool sLocalOverflow = sLocal1d < 0;
+                bool wLocalOverflow = (curLocal1d % sectorColAmount) == 0;
+
+                //SECTOR INDICIES
+                nSector1d = math.select(curSector1d, curSector1d + sectorMatrixColAmount, nLocalOverflow);
+                eSector1d = math.select(curSector1d, curSector1d + 1, eLocalOverflow);
+                sSector1d = math.select(curSector1d, curSector1d - sectorMatrixColAmount, sLocalOverflow);
+                wSector1d = math.select(curSector1d, curSector1d - 1, wLocalOverflow);
+                neSector1d = math.select(curSector1d, curSector1d + sectorMatrixColAmount, nLocalOverflow);
+                neSector1d = math.select(neSector1d, neSector1d + 1, eLocalOverflow);
+                seSector1d = math.select(curSector1d, curSector1d - sectorMatrixColAmount, sLocalOverflow);
+                seSector1d = math.select(seSector1d, seSector1d + 1, eLocalOverflow);
+                swSector1d = math.select(curSector1d, curSector1d - sectorMatrixColAmount, sLocalOverflow);
+                swSector1d = math.select(swSector1d, swSector1d - 1, wLocalOverflow);
+                nwSector1d = math.select(curSector1d, curSector1d + sectorMatrixColAmount, nLocalOverflow);
+                nwSector1d = math.select(nwSector1d, nwSector1d - 1, wLocalOverflow);
+
+
+                nLocal1d = math.select(nLocal1d, curLocal1d - (sectorColAmount * sectorColAmount - sectorColAmount), nLocalOverflow);
+                eLocal1d = math.select(eLocal1d, curLocal1d - sectorColAmount + 1, eLocalOverflow);
+                sLocal1d = math.select(sLocal1d, curLocal1d + (sectorColAmount * sectorColAmount - sectorColAmount), sLocalOverflow);
+                wLocal1d = math.select(wLocal1d, curLocal1d + sectorColAmount - 1, wLocalOverflow);
+                neLocal1d = math.select(neLocal1d, neLocal1d - (sectorColAmount * sectorColAmount), nLocalOverflow);
+                neLocal1d = math.select(neLocal1d, neLocal1d - sectorColAmount, eLocalOverflow);
+                seLocal1d = math.select(seLocal1d, seLocal1d + (sectorColAmount * sectorColAmount), sLocalOverflow);
+                seLocal1d = math.select(seLocal1d, seLocal1d - sectorColAmount, eLocalOverflow);
+                swLocal1d = math.select(swLocal1d, swLocal1d + (sectorColAmount * sectorColAmount), sLocalOverflow);
+                swLocal1d = math.select(swLocal1d, swLocal1d + sectorColAmount, wLocalOverflow);
+                nwLocal1d = math.select(nwLocal1d, nwLocal1d - (sectorColAmount * sectorColAmount), nLocalOverflow);
+                nwLocal1d = math.select(nwLocal1d, nwLocal1d + sectorColAmount, wLocalOverflow);
+
+                //GENERAL 2D
+                curGeneral2d = FlowFieldUtilities.GetGeneral2d(curLocal1d, curSector1d, sectorMatrixColAmount, sectorColAmount);
+                nGeneral2d = FlowFieldUtilities.GetGeneral2d(nLocal1d, nSector1d, sectorMatrixColAmount, sectorColAmount);
+                eGeneral2d = FlowFieldUtilities.GetGeneral2d(eLocal1d, eSector1d, sectorMatrixColAmount, sectorColAmount);
+                sGeneral2d = FlowFieldUtilities.GetGeneral2d(sLocal1d, sSector1d, sectorMatrixColAmount, sectorColAmount);
+                wGeneral2d = FlowFieldUtilities.GetGeneral2d(wLocal1d, wSector1d, sectorMatrixColAmount, sectorColAmount);
+                neGeneral2d = FlowFieldUtilities.GetGeneral2d(neLocal1d, neSector1d, sectorMatrixColAmount, sectorColAmount);
+                seGeneral2d = FlowFieldUtilities.GetGeneral2d(seLocal1d, seSector1d, sectorMatrixColAmount, sectorColAmount);
+                swGeneral2d = FlowFieldUtilities.GetGeneral2d(swLocal1d, swSector1d, sectorMatrixColAmount, sectorColAmount);
+                nwGeneral2d = FlowFieldUtilities.GetGeneral2d(nwLocal1d, nwSector1d, sectorMatrixColAmount, sectorColAmount);
+
+                //Tile center positions
+                float2 nPos = FlowFieldUtilities.IndexToPos(nGeneral2d, tileSize, fieldGridStartPos);
+                float2 ePos = FlowFieldUtilities.IndexToPos(eGeneral2d, tileSize, fieldGridStartPos);
+                float2 sPos = FlowFieldUtilities.IndexToPos(sGeneral2d, tileSize, fieldGridStartPos);
+                float2 wPos = FlowFieldUtilities.IndexToPos(wGeneral2d, tileSize, fieldGridStartPos);
+                float2 nePos = FlowFieldUtilities.IndexToPos(neGeneral2d, tileSize, fieldGridStartPos);
+                float2 sePos = FlowFieldUtilities.IndexToPos(seGeneral2d, tileSize, fieldGridStartPos);
+                float2 swPos = FlowFieldUtilities.IndexToPos(swGeneral2d, tileSize, fieldGridStartPos);
+                float2 nwPos = FlowFieldUtilities.IndexToPos(nwGeneral2d, tileSize, fieldGridStartPos);
+
+                //Tile center distances to goal
+                float nDist = math.distance(nPos, goal);
+                float eDist = math.distance(ePos, goal);
+                float sDist = math.distance(sPos, goal);
+                float wDist = math.distance(wPos, goal);
+                float neDist = math.distance(nePos, goal);
+                float seDist = math.distance(sePos, goal);
+                float swDist = math.distance(swPos, goal);
+                float nwDist = math.distance(nwPos, goal);
+
+                //Tile within range
+                nWithinGoalRange = nDist <= goalRange;
+                eWithinGoalRange = eDist <= goalRange;
+                sWithinGoalRange = sDist <= goalRange;
+                wWithinGoalRange = wDist <= goalRange;
+                neWithinGoalRange = neDist <= goalRange;
+                seWithinGoalRange = seDist <= goalRange;
+                swWithinGoalRange = swDist <= goalRange;
+                nwWithinGoalRange = nwDist <= goalRange;
+
+                //COSTS
+                bool nCostUnwalkable = costs[nSector1d * sectorTileAmount + nLocal1d] == byte.MaxValue;
+                bool eCostUnwalkable = costs[eSector1d * sectorTileAmount + eLocal1d] == byte.MaxValue;
+                bool sCostUnwalkable = costs[sSector1d * sectorTileAmount + sLocal1d] == byte.MaxValue;
+                bool wCostUnwalkable = costs[wSector1d * sectorTileAmount + wLocal1d] == byte.MaxValue;
+                bool neCostUnwalkable = costs[neSector1d * sectorTileAmount + neLocal1d] == byte.MaxValue;
+                bool seCostUnwalkable = costs[seSector1d * sectorTileAmount + seLocal1d] == byte.MaxValue;
+                bool swCostUnwalkable = costs[swSector1d * sectorTileAmount + swLocal1d] == byte.MaxValue;
+                bool nwCostUnwalkable = costs[nwSector1d * sectorTileAmount + nwLocal1d] == byte.MaxValue;
+
+                bool nRangeBorder = IsRangeBorder(nGeneral2d);
+                bool eRangeBorder = IsRangeBorder(eGeneral2d);
+                bool sRangeBorder = IsRangeBorder(sGeneral2d);
+                bool wRangeBorder = IsRangeBorder(wGeneral2d);
+                bool neRangeBorder = IsRangeBorder(neGeneral2d);
+                bool seRangeBorder = IsRangeBorder(seGeneral2d);
+                bool swRangeBorder = IsRangeBorder(swGeneral2d);
+                bool nwRangeBorder = IsRangeBorder(nwGeneral2d);
+
+                nUnwalkable = (nCostUnwalkable && !nWithinGoalRange)  || (nCostUnwalkable && nRangeBorder);
+                eUnwalkable = (eCostUnwalkable && !eWithinGoalRange) || (eCostUnwalkable && eRangeBorder);
+                sUnwalkable = (sCostUnwalkable && !sWithinGoalRange) || (sCostUnwalkable && sRangeBorder);
+                wUnwalkable = (wCostUnwalkable && !wWithinGoalRange) || (wCostUnwalkable && wRangeBorder);
+                neUnwalkable = (neCostUnwalkable && !neWithinGoalRange) || (neCostUnwalkable && neRangeBorder);
+                seUnwalkable = (seCostUnwalkable && !seWithinGoalRange) || (seCostUnwalkable && seRangeBorder);
+                swUnwalkable = (swCostUnwalkable && !swWithinGoalRange) || (swCostUnwalkable && swRangeBorder);
+                nwUnwalkable = (nwCostUnwalkable && !nwWithinGoalRange) || (nwCostUnwalkable && nwRangeBorder);
+
+                bool neCorner = !(neUnwalkable || nUnwalkable || eUnwalkable);
+                bool seCorner = !(seUnwalkable || sUnwalkable || eUnwalkable);
+                bool swCorner = !(swUnwalkable || sUnwalkable || wUnwalkable);
+                bool nwCorner = !(nwUnwalkable || nUnwalkable || wUnwalkable);
+                if (neCorner)
+                {
+                    TestLOSC(curTileGeneral2d, neGeneral2d);
+                }
+                if (seCorner)
+                {
+                    TestLOSC(curTileGeneral2d, seGeneral2d);
+                }
+                if (swCorner)
+                {
+                    TestLOSC(curTileGeneral2d, swGeneral2d);
+                }
+                if (nwCorner)
+                {
+                    TestLOSC(curTileGeneral2d, nwGeneral2d);
+                }
+            }
             bool TestAllLOSC()
             {
-                bool neCorner = neUnwalkable && !nUnwalkable && !eUnwalkable;
-                bool seCorner = seUnwalkable && !sUnwalkable && !eUnwalkable;
-                bool swCorner = swUnwalkable && !sUnwalkable && !wUnwalkable;
-                bool nwCorner = nwUnwalkable && !nUnwalkable && !wUnwalkable;
+                bool neCorner = neUnwalkable && !nUnwalkable && !eUnwalkable && !neWithinGoalRange;
+                bool seCorner = seUnwalkable && !sUnwalkable && !eUnwalkable && !seWithinGoalRange;
+                bool swCorner = swUnwalkable && !sUnwalkable && !wUnwalkable && !swWithinGoalRange;
+                bool nwCorner = nwUnwalkable && !nUnwalkable && !wUnwalkable && !nwWithinGoalRange;
                 bool cornerDetected = false;
                 if (neCorner)
                 {
-                    bool test = TestLOSC(neGeneral2d);
+                    bool test = TestLOSC(neGeneral2d, curGeneral2d);
                     cornerDetected = cornerDetected || test;
                 }
                 if (seCorner)
                 {
-                    bool test = TestLOSC(seGeneral2d);
+                    bool test = TestLOSC(seGeneral2d, curGeneral2d);
                     cornerDetected = cornerDetected || test;
                 }
                 if (swCorner)
                 {
-                    bool test = TestLOSC(swGeneral2d);
+                    bool test = TestLOSC(swGeneral2d, curGeneral2d);
                     cornerDetected = cornerDetected || test;
                 }
                 if (nwCorner)
                 {
-                    bool test = TestLOSC(nwGeneral2d);
+                    bool test = TestLOSC(nwGeneral2d, curGeneral2d);
                     cornerDetected = cornerDetected || test;
                 }
                 return cornerDetected;
             }
-            bool TestLOSC(int2 pickedUnwalkableGeneral2d)
+            bool TestLOSC(int2 unwalkablePart, int2 walkableDiagonalPart)
             {
-                int2 unwalkableToTarget = targetGeneral2d - pickedUnwalkableGeneral2d;
-                int2 walkableToTarget = targetGeneral2d - curGeneral2d;
+                int2 unwalkableToTarget = targetGeneral2d - unwalkablePart;
+                int2 walkableToTarget = targetGeneral2d - walkableDiagonalPart;
                 int2 unwalkableToTargetAbs = math.abs(unwalkableToTarget);
                 int2 walkableToTargetAbs = math.abs(walkableToTarget);
                 int2 toTargetAbsDif = unwalkableToTargetAbs - walkableToTargetAbs;
                 if (toTargetAbsDif.x * toTargetAbsDif.y >= 0) { return false; }
 
-                int2 unwalkableToWalkableChange = curGeneral2d - pickedUnwalkableGeneral2d;
-                int2 closerSideOfCorner = math.select(pickedUnwalkableGeneral2d + new int2(0, unwalkableToWalkableChange.y), pickedUnwalkableGeneral2d + new int2(unwalkableToWalkableChange.x, 0), walkableToTargetAbs.x < unwalkableToTargetAbs.x);
-                int2 fartherSideOfCorner = math.select(pickedUnwalkableGeneral2d + new int2(0, unwalkableToWalkableChange.y), pickedUnwalkableGeneral2d + new int2(unwalkableToWalkableChange.x, 0), walkableToTargetAbs.x > unwalkableToTargetAbs.x);
+                int2 unwalkableToWalkableChange = walkableDiagonalPart - unwalkablePart;
+                int2 closerSideOfCorner = math.select(unwalkablePart + new int2(0, unwalkableToWalkableChange.y), unwalkablePart + new int2(unwalkableToWalkableChange.x, 0), walkableToTargetAbs.x < unwalkableToTargetAbs.x);
+                int2 fartherSideOfCorner = math.select(unwalkablePart + new int2(0, unwalkableToWalkableChange.y), unwalkablePart + new int2(unwalkableToWalkableChange.x, 0), walkableToTargetAbs.x > unwalkableToTargetAbs.x);
                 int2 fartherSideOfCornerChange = fartherSideOfCorner - targetGeneral2d;
                 int2 fartherSideOfCornerChangeAbs = math.abs(fartherSideOfCornerChange);
                 int2 lineStep = (closerSideOfCorner - targetGeneral2d) * 2 + new int2(fartherSideOfCornerChange.x / fartherSideOfCornerChangeAbs.x, fartherSideOfCornerChange.y / fartherSideOfCornerChangeAbs.y);
