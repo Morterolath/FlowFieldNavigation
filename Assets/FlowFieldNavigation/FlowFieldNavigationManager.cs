@@ -25,7 +25,6 @@ namespace FlowFieldNavigation
         internal AgentRemovingSystem AgentRemovingSystem;
         internal AgentDataWriteSystem AgentDataWriteSystem;
         internal AgentDataReadSystem AgentDataReadSystem;
-        internal PathUpdateSeedContainer PathUpdateSeedContainer;
         NavigationUpdater _navigationUpdater;
         void Awake()
         {
@@ -97,7 +96,6 @@ namespace FlowFieldNavigation
                 startInputs.VerticalVoxelSize,
                 startInputs.MaxSurfaceHeightDifference,
                 startInputs.MaxWalkableHeight);
-            PathUpdateSeedContainer = new PathUpdateSeedContainer();
             AgentDataContainer = new AgentDataContainer(this);
             AgentRemovingSystem = new AgentRemovingSystem(this);
             AgentDataWriteSystem = new AgentDataWriteSystem(this);

@@ -28,7 +28,7 @@ namespace FlowFieldNavigation
             _dynamicAreaScheduler = new DynamicAreaScheduler(navManager);
             _portalTraversalScheduler = new PortalTraversalScheduler(navManager, _requestedSectorCalculationScheduler);
             _flowCalculationScheduler = new FlowCalculationScheduler(navManager, _losIntegrationScheduler);
-            _pathfindingDataExposer = new PathfindingDataExposer(_navManager.PathDataContainer, _navManager.PathUpdateSeedContainer);
+            _pathfindingDataExposer = new PathfindingDataExposer(_navManager.PathDataContainer);
             _porTravRequestedPathList = new NativeList<PortalTraversalRequest>(Allocator.Persistent);
             _flowRequestedPathList = new NativeList<FlowRequest>(Allocator.Persistent);
             _losRequestedPathList = new NativeList<LosRequest>(Allocator.Persistent);

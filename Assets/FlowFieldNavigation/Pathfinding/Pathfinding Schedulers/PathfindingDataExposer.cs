@@ -9,11 +9,9 @@ namespace FlowFieldNavigation
     internal class PathfindingDataExposer
     {
         PathDataContainer _pathContainer;
-        PathUpdateSeedContainer _pathUpdateSeedContainer;
-        internal PathfindingDataExposer(PathDataContainer pathDataContainer, PathUpdateSeedContainer pathUpdateSeedContainer)
+        internal PathfindingDataExposer(PathDataContainer pathDataContainer)
         {
             _pathContainer = pathDataContainer;
-            _pathUpdateSeedContainer = pathUpdateSeedContainer;
         }
         internal void Expose(
             NativeArray<int> pathIndiciesOfScheduledDynamicAreas,
@@ -36,24 +34,16 @@ namespace FlowFieldNavigation
         {
             List<PathPortalTraversalData> pathPortalTraversalDataArray = _pathContainer.PathPortalTraversalDataList;
             NativeArray<PathDestinationData> pathDestinationDataArray = _pathContainer.PathDestinationDataList.AsArray();
-            NativeList<PathUpdateSeed> pathUpdateSeedList = _pathUpdateSeedContainer.UpdateSeeds;
+            NativeParallelMultiHashMap<int,int> pathIndexToUpdateSeedMap = _pathContainer.PathIndexToUpdateSeedsMap;
             for(int i = 0; i < portalTraversalRequestedPaths.Length; i++)
             {
                 int pathIndex = portalTraversalRequestedPaths[i].PathIndex;
                 PathDestinationData destinationData = pathDestinationDataArray[pathIndex];
                 if(destinationData.DestinationType != DestinationType.DynamicDestination) { continue; }
                 NativeList<int> newPathUpdateSeedIndicies = pathPortalTraversalDataArray[pathIndex].NewPathUpdateSeedIndicies;
-                int offset = destinationData.Offset;
                 for(int j = 0; j < newPathUpdateSeedIndicies.Length; j++)
                 {
-                    PathUpdateSeed seed = new PathUpdateSeed()
-                    {
-                        CostFieldOffset = offset,
-                        PathIndex = pathIndex,
-                        TileIndex = newPathUpdateSeedIndicies[j],
-                        UpdateFlag = false,
-                    };
-                    pathUpdateSeedList.Add(seed);
+                    pathIndexToUpdateSeedMap.Add(pathIndex, newPathUpdateSeedIndicies[j]);
                 }
                 newPathUpdateSeedIndicies.Clear();
             }

@@ -141,7 +141,7 @@ namespace FlowFieldNavigation
             NativeArray<int> pathSubscriberCountArray = _pathContainer.PathSubscriberCounts.AsArray();
             NativeArray<FlowData> exposedFlowData = _pathContainer.ExposedFlowData.AsArray();
             PathSectorToFlowStartMapper flowStartMap = _pathContainer.SectorFlowStartMap;
-            NativeArray<PathUpdateSeed> pathUpdateSeeds = _navigationManager.PathUpdateSeedContainer.UpdateSeeds.AsArray();
+            NativeParallelMultiHashMap<int, int> pathIndexToUpdateSeedMap = _pathContainer.PathIndexToUpdateSeedsMap;
             NativeArray<float> PathDesiredRanges = _pathContainer.PathDesiredRanges.AsArray();
             NativeArray<int> pathIslandSeedsAsFieldIndex = _pathContainer.PathIslandSeedsAsFieldIndicies.AsArray();
 
@@ -269,18 +269,10 @@ namespace FlowFieldNavigation
                 PathDestinationDataArray = pathDestinationDataArray,
                 CostFields = _costFieldCosts.AsArray(),
                 PathRoutineDataArray = pathRoutineDataArray,
-                UpdateSeeds = pathUpdateSeeds,
+                PathIndexToUpdateSeedMap = pathIndexToUpdateSeedMap,
             };
-            JobHandle dynamicGoalReconstructionHandle = dynamicGoalPathReconstructionDetermination.Schedule(pathUpdateSeeds.Length, 100, dynamicGoalUpdateHandle);
+            JobHandle dynamicGoalReconstructionHandle = dynamicGoalPathReconstructionDetermination.Schedule(pathRoutineDataArray.Length, 100, dynamicGoalUpdateHandle);
             if (FlowFieldUtilities.DebugMode) { dynamicGoalReconstructionHandle.Complete(); }
-
-            DynamicGoalReconstructionFlagReadJob dynamicGoalReconstructionFlagRead = new DynamicGoalReconstructionFlagReadJob()
-            {
-                Seeds = pathUpdateSeeds,
-                PathRoutineDataArray = pathRoutineDataArray,
-            };
-            JobHandle dynamicGoalReconstructionFlagReadJob = dynamicGoalReconstructionFlagRead.Schedule(dynamicGoalReconstructionHandle);
-            if (FlowFieldUtilities.DebugMode) { dynamicGoalReconstructionFlagReadJob.Complete(); }
 
             //Current path reconstruction submission
             CurrentPathReconstructionDeterminationJob reconstructionDetermination = new CurrentPathReconstructionDeterminationJob()
@@ -296,7 +288,7 @@ namespace FlowFieldNavigation
                 PathRoutineDataArray = pathRoutineDataArray,
                 FlockIndexToPathRequestIndex = _flockIndexToPathRequestIndex,
             };
-            JobHandle reconstructionDeterminationHandle = reconstructionDetermination.Schedule(JobHandle.CombineDependencies(dynamicGoalReconstructionFlagReadJob, agentTaskCleaningHandle, selfTargetingFixHandle));
+            JobHandle reconstructionDeterminationHandle = reconstructionDetermination.Schedule(JobHandle.CombineDependencies(dynamicGoalReconstructionHandle, agentTaskCleaningHandle, selfTargetingFixHandle));
             if (FlowFieldUtilities.DebugMode) { reconstructionDeterminationHandle.Complete(); }
             
             //Current path update submission

@@ -4,6 +4,7 @@ using Unity.Burst;
 using Unity.Mathematics;
 using Unity.Collections.LowLevel.Unsafe;
 using System;
+using Codice.CM.Common;
 
 namespace FlowFieldNavigation
 {
@@ -18,29 +19,41 @@ namespace FlowFieldNavigation
         internal float2 FieldGridStartPos;
         [ReadOnly] internal NativeArray<UnsafeListReadOnly<byte>> CostFields;
         [ReadOnly] internal NativeArray<PathDestinationData> PathDestinationDataArray;
-        [ReadOnly] internal NativeArray<PathRoutineData> PathRoutineDataArray;
-        internal NativeArray<PathUpdateSeed> UpdateSeeds;
+        [ReadOnly] internal NativeParallelMultiHashMap<int, int> PathIndexToUpdateSeedMap;
+        internal NativeArray<PathRoutineData> PathRoutineDataArray;
 
         public void Execute(int startIndex, int count)
         {
             NativeBitArray bfsArray = new NativeBitArray(SectorTileAmount, Allocator.Temp);
             NativeQueue<int> bfsQueue = new NativeQueue<int>(Allocator.Temp);
-            for(int i = startIndex; i < startIndex + count; i++)
+
+            for (int i = startIndex; i < startIndex + count; i++)
             {
-                PathUpdateSeed seed = UpdateSeeds[i];
-                if ((PathRoutineDataArray[seed.PathIndex].Task & PathTask.Reconstruct) == PathTask.Reconstruct)
+                int curPathIndex = i;
+                PathRoutineData routineData = PathRoutineDataArray[curPathIndex];
+                if ((routineData.Task & PathTask.Reconstruct) == PathTask.Reconstruct)
                 {
-                    seed.UpdateFlag = false;
-                    UpdateSeeds[i] = seed;
                     continue;
                 }
-                float2 destination = PathDestinationDataArray[seed.PathIndex].Destination;
+                NativeParallelMultiHashMap<int,int>.Enumerator updateSeedEnumerator = PathIndexToUpdateSeedMap.GetValuesForKey(curPathIndex);
+                PathDestinationData destinationData = PathDestinationDataArray[curPathIndex];
+                float2 destination = destinationData.Destination;
+                int offset = destinationData.Offset;
                 int2 goalIndex2d = FlowFieldUtilities.PosTo2D(destination, TileSize, FieldGridStartPos);
                 int goalIndex1d = FlowFieldUtilities.To1D(goalIndex2d, FieldColAmount);
-                seed.UpdateFlag = IsOutOfReach(seed.TileIndex, goalIndex1d, seed.CostFieldOffset, bfsArray, bfsQueue);
-                UpdateSeeds[i] = seed;
-                bfsArray.Clear();
-                bfsQueue.Clear();
+                bool canNotReach = false;
+                while(updateSeedEnumerator.MoveNext() && !canNotReach)
+                {
+                    int seed = updateSeedEnumerator.Current;
+                    canNotReach = IsOutOfReach(seed, goalIndex1d, offset, bfsArray, bfsQueue);
+                    bfsArray.Clear();
+                    bfsQueue.Clear();
+                }
+                if (canNotReach)
+                {
+                    routineData.DestinationState = DynamicDestinationState.OutOfReach;
+                    PathRoutineDataArray[curPathIndex] = routineData;
+                }
             }
         }
 

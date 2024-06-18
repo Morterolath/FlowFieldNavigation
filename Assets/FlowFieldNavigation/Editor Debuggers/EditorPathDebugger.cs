@@ -1,5 +1,6 @@
 ﻿#if (UNITY_EDITOR)
 
+using Codice.CM.Common;
 using System;
 using System.Linq;
 using Unity.Collections;
@@ -80,14 +81,12 @@ namespace FlowFieldNavigation
         {
             int pathIndex = agent.GetPathIndex();
             if(pathIndex == -1) { return; }
-            NativeArray<PathUpdateSeed> seeds = _navigationManager.PathUpdateSeedContainer.UpdateSeeds.AsArray();
+            NativeParallelMultiHashMap<int,int>.Enumerator seedEnumerator = _navigationManager.PathDataContainer.PathIndexToUpdateSeedsMap.GetValuesForKey(pathIndex);
             Gizmos.color = Color.white;
-            for(int i = 0; i < seeds.Length; i++)
+            while (seedEnumerator.MoveNext())
             {
-                PathUpdateSeed seed = seeds[i];
-                if(seed.PathIndex !=  pathIndex) { continue; }
-
-                int2 goal2d = FlowFieldUtilities.To2D(seed.TileIndex, FlowFieldUtilities.FieldColAmount);
+                int curseed = seedEnumerator.Current;
+                int2 goal2d = FlowFieldUtilities.To2D(curseed, FlowFieldUtilities.FieldColAmount);
                 float2 goalpos2d = FlowFieldUtilities.IndexToPos(goal2d, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
                 float3 goalpos3d = new float3(goalpos2d.x, 0f, goalpos2d.y);
                 Gizmos.DrawCube(goalpos3d, Vector3.one / 2);

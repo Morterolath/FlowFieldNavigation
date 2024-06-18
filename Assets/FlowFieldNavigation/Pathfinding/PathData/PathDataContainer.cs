@@ -33,16 +33,15 @@ namespace FlowFieldNavigation
         internal List<NativeList<int>> PathGoalTraversalDataFieldIndexLists;
         internal List<NativeHashSet<int>> PathAlreadyConsideredSectorIndexMaps;
         internal NativeList<int> PathIslandSeedsAsFieldIndicies;
+        internal NativeParallelMultiHashMap<int, int> PathIndexToUpdateSeedsMap;
         Stack<int> _removedPathIndicies;
 
         FieldDataContainer _fieldProducer;
         PathPreallocator _preallocator;
-        PathUpdateSeedContainer _pathUpdateSeedContainer;
         internal PathDataContainer(FlowFieldNavigationManager navigationManager)
         {
             _fieldProducer = navigationManager.FieldDataContainer;
             PathfindingInternalDataList = new List<PathfindingInternalData>(1);
-            _pathUpdateSeedContainer = navigationManager.PathUpdateSeedContainer;
             _preallocator = new PathPreallocator(_fieldProducer, FlowFieldUtilities.SectorTileAmount, FlowFieldUtilities.SectorMatrixTileAmount);
             _removedPathIndicies = new Stack<int>();
             PathSubscriberCounts = new NativeList<int>(Allocator.Persistent);
@@ -71,6 +70,7 @@ namespace FlowFieldNavigation
             PathGoalTraversalDataFieldIndexLists = new List<NativeList<int>>();
             PathAlreadyConsideredSectorIndexMaps = new List<NativeHashSet<int>>();
             PathIslandSeedsAsFieldIndicies = new NativeList<int>(Allocator.Persistent);
+            PathIndexToUpdateSeedsMap = new NativeParallelMultiHashMap<int, int>(0, Allocator.Persistent);
         }
         internal void DisposeAll()
         {
@@ -118,6 +118,7 @@ namespace FlowFieldNavigation
                     internalData.FlowFieldCalculationBuffer.Dispose();
                     sectorToFlowStartTable.Dispose();
                     portalTraversalData.NewPathUpdateSeedIndicies.Dispose();
+                    PathIndexToUpdateSeedsMap.Remove(i);
                     PathGoalNeighbourIndexToGoalIndexMaps[i].Dispose();
                     PathGoalTraversalDataFieldIndexLists[i].Dispose();
                     ExposedPathStateList[i] = PathState.Removed;
@@ -145,23 +146,6 @@ namespace FlowFieldNavigation
                 }
             }
             _preallocator.CheckForDeallocations();
-
-            if(deallcoated != 0)
-            {
-                RemoveUnusedPathUpdateSeeds();
-            }
-        }
-        void RemoveUnusedPathUpdateSeeds()
-        {
-            NativeList<PathUpdateSeed> pathUpdateSeeds = _pathUpdateSeedContainer.UpdateSeeds;
-            for(int i = pathUpdateSeeds.Length - 1; i >= 0; i--)
-            {
-                int seedPathIndex = pathUpdateSeeds[i].PathIndex;
-                if (ExposedPathStateList[seedPathIndex] == PathState.Removed)
-                {
-                    pathUpdateSeeds.RemoveAtSwapBack(i);
-                }
-            }
         }
         void RemoveFromPathSectorToFlowStartMapper(NativeArray<int> pickedSectorList, int pathIndex)
         {
