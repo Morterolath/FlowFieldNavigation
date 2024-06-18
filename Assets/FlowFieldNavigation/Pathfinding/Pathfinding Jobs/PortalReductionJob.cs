@@ -12,6 +12,7 @@ namespace FlowFieldNavigation
     {
         internal int2 GoalIndex;
         internal float2 GoalPosition;
+        internal DestinationType DestinationType;
         internal float GoalRange;
         internal int IslandSeed;
         internal float TileSize;
@@ -418,8 +419,6 @@ namespace FlowFieldNavigation
             if(succesfull1 || succesfull2)
             {
                 curTravData = PortalTraversalDataArray[curPortalIndex];
-                int goalIndex1d = FlowFieldUtilities.To1D(GoalIndex, FieldColAmount);
-                NewExploredUpdateSeedIndicies.Add(goalIndex1d);
             }
         }
         bool TrySector(int sector1d, NativeArray<float> tileCosts, NativeList<int> targetNeighbourPortalIndicies)
@@ -438,7 +437,76 @@ namespace FlowFieldNavigation
             SetTargetNeighbourPortalDataAndAddToList(targetNeighbourPortalIndicies, tileCosts, sector2d);
             return true;
         }
+        bool IsUpdateSeed(NativeBitArray bfsMarks, NativeSlice<byte> costs, int startLocalIndex, int sectorColAmount, int sectorTileAmount)
+        {
+            bool succesfull = !bfsMarks.IsSet(startLocalIndex);
+            if (!succesfull) { return false; }
+            bfsMarks.Set(startLocalIndex, true);
+            NativeQueue<int> bfsQueue = new NativeQueue<int>(Allocator.Temp);
+            bfsQueue.Enqueue(startLocalIndex);
 
+            int4 directions_N_E_S_W;
+            bool4 isBlocked_N_E_S_W;
+
+            //Remaining
+            while (!bfsQueue.IsEmpty())
+            {
+                int curIndex = bfsQueue.Dequeue();
+                SetNeighbourData(curIndex);
+                EnqueueNeighbours();
+            }
+
+            void SetNeighbourData(int curIndex)
+            {
+                directions_N_E_S_W = new int4()
+                {
+                    x = sectorColAmount,
+                    y = 1,
+                    z = -sectorColAmount,
+                    w = -1
+                };
+                directions_N_E_S_W += curIndex;
+                bool4 overflow_N_E_S_W = new bool4()
+                {
+                    x = directions_N_E_S_W.x >= sectorTileAmount,
+                    y = (directions_N_E_S_W.y % sectorColAmount) == 0,
+                    z = directions_N_E_S_W.z < 0,
+                    w = (curIndex % sectorColAmount) == 0,
+                };
+                directions_N_E_S_W = math.select(directions_N_E_S_W, curIndex, overflow_N_E_S_W);
+                isBlocked_N_E_S_W = new bool4()
+                {
+                    x = bfsMarks.IsSet(directions_N_E_S_W.x),
+                    y = bfsMarks.IsSet(directions_N_E_S_W.y),
+                    z = bfsMarks.IsSet(directions_N_E_S_W.z),
+                    w = bfsMarks.IsSet(directions_N_E_S_W.w),
+                };
+            }
+            void EnqueueNeighbours()
+            {
+                if (!isBlocked_N_E_S_W.x)
+                {
+                    bfsQueue.Enqueue(directions_N_E_S_W.x);
+                    bfsMarks.Set(directions_N_E_S_W.x, true);
+                }
+                if (!isBlocked_N_E_S_W.y)
+                {
+                    bfsQueue.Enqueue(directions_N_E_S_W.y);
+                    bfsMarks.Set(directions_N_E_S_W.y, true);
+                }
+                if (!isBlocked_N_E_S_W.z)
+                {
+                    bfsQueue.Enqueue(directions_N_E_S_W.z);
+                    bfsMarks.Set(directions_N_E_S_W.z, true);
+                }
+                if (!isBlocked_N_E_S_W.w)
+                {
+                    bfsQueue.Enqueue(directions_N_E_S_W.w);
+                    bfsMarks.Set(directions_N_E_S_W.w, true);
+                }
+            }
+            return true;
+        }
         void RunFMOnSecotor(int sector1d, NativeArray<float> targetSectorCostsGrid)
         {
             int sectorColAmount = SectorColAmount;
@@ -450,6 +518,14 @@ namespace FlowFieldNavigation
             int4 directions_N_E_S_W;
             int4 directions_NE_SE_SW_NW;
             bool4 isBlocked_N_E_S_W;
+
+            //Set updateSeedBfsArray
+            NativeBitArray updateSeedBfsArray = new NativeBitArray(sectorTileAmount, Allocator.Temp, NativeArrayOptions.ClearMemory);
+            for (int i = 0; i < updateSeedBfsArray.Length; i++)
+            {
+                byte cost = costs[i];
+                if (cost == byte.MaxValue) { updateSeedBfsArray.Set(i, true); }
+            }
 
             //Initialize grid
             for (int i = 0; i < targetSectorCostsGrid.Length; i++)
@@ -463,6 +539,14 @@ namespace FlowFieldNavigation
                     targetSectorCostsGrid[i] = 0;
                     fastMarchinStartLocalIndicies.Add(i);
                     isBlocked.Set(i, true);
+
+                    if(DestinationType == DestinationType.DynamicDestination)
+                    {
+                        if(IsUpdateSeed(updateSeedBfsArray, costs, i, sectorColAmount, sectorTileAmount))
+                        {
+                            NewExploredUpdateSeedIndicies.Add(FlowFieldUtilities.To1D(tileGeneral2d, FieldColAmount));
+                        }
+                    }
                 }
                 else
                 {

@@ -59,6 +59,7 @@ namespace FlowFieldNavigation
                 //Graph Reduction
                 PortalReductionJob reductionJob = new PortalReductionJob()
                 {
+                    DestinationType = destinationData.DestinationType,
                     GoalPosition = destinationData.Destination,
                     GoalRange = goalRange,
                     IslandSeed = islandSeed,
