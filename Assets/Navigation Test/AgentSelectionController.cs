@@ -203,7 +203,7 @@ public class AgentSelectionController : MonoBehaviour
                 _navigationManager.Interface.SetDestination(agents, destination, _currentRange);
                 return;
             }
-            _navigationManager.Interface.SetDestination(agents, agent);
+            _navigationManager.Interface.SetDestination(agents, agent, _currentRange);
         }
 
     }

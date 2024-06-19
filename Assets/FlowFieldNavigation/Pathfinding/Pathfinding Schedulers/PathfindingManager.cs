@@ -143,6 +143,7 @@ namespace FlowFieldNavigation
             PathSectorToFlowStartMapper flowStartMap = _pathContainer.SectorFlowStartMap;
             NativeParallelMultiHashMap<int, int> pathIndexToUpdateSeedMap = _pathContainer.PathIndexToUpdateSeedsMap;
             NativeArray<float> PathDesiredRanges = _pathContainer.PathDesiredRanges.AsArray();
+            NativeArray<float> pathRanges = _pathContainer.PathRanges.AsArray();
             NativeArray<int> pathIslandSeedsAsFieldIndex = _pathContainer.PathIslandSeedsAsFieldIndicies.AsArray();
 
             //Copy agent positions from transforms
@@ -247,6 +248,8 @@ namespace FlowFieldNavigation
                 FieldMaxYExcluding = FlowFieldUtilities.FieldMaxYExcluding,
                 FieldMinXIncluding = FlowFieldUtilities.FieldMinXIncluding,
                 FieldMinYIncluding = FlowFieldUtilities.FieldMinYIncluding,
+                PathDesiredRanges = PathDesiredRanges,
+                PathRanges = pathRanges,
                 PathIslandSeedsAsFieldIndices = pathIslandSeedsAsFieldIndex,
                 PathStateArray = pathStateArray,
                 AgentPositions = _agentPositions.AsArray(),

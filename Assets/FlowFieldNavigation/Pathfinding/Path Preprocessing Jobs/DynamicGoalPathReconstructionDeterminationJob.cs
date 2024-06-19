@@ -31,7 +31,9 @@ namespace FlowFieldNavigation
             {
                 int curPathIndex = i;
                 PathRoutineData routineData = PathRoutineDataArray[curPathIndex];
-                if ((routineData.Task & PathTask.Reconstruct) == PathTask.Reconstruct)
+                bool alreadyBeingReconstructed = (routineData.Task & PathTask.Reconstruct) == PathTask.Reconstruct;
+                bool alreadyOutOfRangeDueToRangeChange = (routineData.DestinationState & DynamicDestinationState.OutOfReach) == DynamicDestinationState.OutOfReach;
+                if (alreadyBeingReconstructed ||alreadyOutOfRangeDueToRangeChange)
                 {
                     continue;
                 }
