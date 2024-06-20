@@ -269,6 +269,7 @@ namespace FlowFieldNavigation
                 SectorTileAmount = FlowFieldUtilities.SectorTileAmount,
                 FieldColAmount = FlowFieldUtilities.FieldColAmount,
                 FieldGridStartPos = FlowFieldUtilities.FieldGridStartPosition,
+                PathGoalRanges = pathRanges,
                 PathDestinationDataArray = pathDestinationDataArray,
                 CostFields = _costFieldCosts.AsArray(),
                 PathRoutineDataArray = pathRoutineDataArray,

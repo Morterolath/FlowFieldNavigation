@@ -20,6 +20,7 @@ namespace FlowFieldNavigation
         [ReadOnly] internal NativeArray<UnsafeListReadOnly<byte>> CostFields;
         [ReadOnly] internal NativeArray<PathDestinationData> PathDestinationDataArray;
         [ReadOnly] internal NativeParallelMultiHashMap<int, int> PathIndexToUpdateSeedMap;
+        [ReadOnly] internal NativeArray<float> PathGoalRanges;
         internal NativeArray<PathRoutineData> PathRoutineDataArray;
 
         public void Execute(int startIndex, int count)
@@ -42,12 +43,11 @@ namespace FlowFieldNavigation
                 float2 destination = destinationData.Destination;
                 int offset = destinationData.Offset;
                 int2 goalIndex2d = FlowFieldUtilities.PosTo2D(destination, TileSize, FieldGridStartPos);
-                int goalIndex1d = FlowFieldUtilities.To1D(goalIndex2d, FieldColAmount);
                 bool canNotReach = false;
                 while(updateSeedEnumerator.MoveNext() && !canNotReach)
                 {
                     int seed = updateSeedEnumerator.Current;
-                    canNotReach = IsOutOfReach(seed, goalIndex1d, offset, bfsArray, bfsQueue);
+                    canNotReach = IsOutOfReach(seed, goalIndex2d, destination, PathGoalRanges[curPathIndex], offset, bfsArray, bfsQueue);
                     bfsArray.Clear();
                     bfsQueue.Clear();
                 }
@@ -59,15 +59,21 @@ namespace FlowFieldNavigation
             }
         }
 
-        bool IsOutOfReach(int seedTile, int targetTile, int costFieldOffset, NativeBitArray bfsArray, NativeQueue<int> bfsQueue)
+        bool IsOutOfReach(int seedGeneral1d, int2 goalGeneral2d, float2 goalPos, float goalRangeSq, int costFieldOffset, NativeBitArray bfsArray, NativeQueue<int> bfsQueue)
         {
-            LocalIndex1d seedLocal = FlowFieldUtilities.GetLocal1D(seedTile, FieldColAmount, SectorColAmount, SectorMatrixColAmount);
-            LocalIndex1d targetLocal = FlowFieldUtilities.GetLocal1D(targetTile, FieldColAmount, SectorColAmount, SectorMatrixColAmount);
-            if(seedLocal.sector != targetLocal.sector) { return true; }
-            if(seedLocal.index == targetLocal.index) { return false; }
+            //Did seed already reach goal?
+            int2 seedGeneral2d = FlowFieldUtilities.To2D(seedGeneral1d, FieldColAmount);
+            if (seedGeneral2d.Equals(goalGeneral2d)) { return false; }
+            float2 seedPos = FlowFieldUtilities.IndexToPos(seedGeneral2d, TileSize, FieldGridStartPos);
+            if(math.distancesq(seedPos, goalPos) <= goalRangeSq) { return false; }
+
+            //If not already reached goal, run the bfs
+            LocalIndex1d seedLocal = FlowFieldUtilities.GetLocal1D(seedGeneral1d, FieldColAmount, SectorColAmount, SectorMatrixColAmount);
+            LocalIndex1d targetLocal = FlowFieldUtilities.GetLocal1D(goalGeneral2d, SectorColAmount, SectorMatrixColAmount);
             int bfsSector = seedLocal.sector;
             int bfsSectorCostStartIndex = bfsSector * SectorTileAmount;
             UnsafeListReadOnly<byte> costs = CostFields[costFieldOffset];
+
             //Transfer unwalkable areas
             for(int i = 0; i < SectorTileAmount; i++)
             {
@@ -77,7 +83,6 @@ namespace FlowFieldNavigation
             //Run bfs, search for targetLocal
             bfsArray.Set(seedLocal.index, true);
             bfsQueue.Enqueue(seedLocal.index);
-
             while (!bfsQueue.IsEmpty())
             {
                 int curLocal1d = bfsQueue.Dequeue();
@@ -94,9 +99,27 @@ namespace FlowFieldNavigation
                 };
                 localIndicies_N_E_S_W = math.select(localIndicies_N_E_S_W, curLocal1d, localOverflow_N_E_S_W);
 
-                //Look at neighbours
-                bool4 targetFound4 = localIndicies_N_E_S_W == targetLocal.index;
-                if(targetFound4.x || targetFound4.y || targetFound4.z || targetFound4.w) { return false; }
+                //Reached goal?
+                int2 nGeneral2d = FlowFieldUtilities.GetGeneral2d(localIndicies_N_E_S_W.x, bfsSector, SectorMatrixColAmount, SectorColAmount);
+                int2 eGeneral2d = FlowFieldUtilities.GetGeneral2d(localIndicies_N_E_S_W.y, bfsSector, SectorMatrixColAmount, SectorColAmount);
+                int2 sGeneral2d = FlowFieldUtilities.GetGeneral2d(localIndicies_N_E_S_W.z, bfsSector, SectorMatrixColAmount, SectorColAmount);
+                int2 wGeneral2d = FlowFieldUtilities.GetGeneral2d(localIndicies_N_E_S_W.w, bfsSector, SectorMatrixColAmount, SectorColAmount);
+                if (nGeneral2d.Equals(goalGeneral2d)) { return false; }
+                if (eGeneral2d.Equals(goalGeneral2d)) { return false; }
+                if (sGeneral2d.Equals(goalGeneral2d)) { return false; }
+                if (wGeneral2d.Equals(goalGeneral2d)) { return false; }
+                float2 npos = FlowFieldUtilities.IndexToPos(nGeneral2d, TileSize, FieldGridStartPos);
+                float2 epos = FlowFieldUtilities.IndexToPos(eGeneral2d, TileSize, FieldGridStartPos);
+                float2 spos = FlowFieldUtilities.IndexToPos(sGeneral2d, TileSize, FieldGridStartPos);
+                float2 wpos = FlowFieldUtilities.IndexToPos(wGeneral2d, TileSize, FieldGridStartPos);
+                float nDistSq = math.distancesq(npos, goalPos);
+                float eDistSq = math.distancesq(epos, goalPos);
+                float sDistSq = math.distancesq(spos, goalPos);
+                float wDistSq = math.distancesq(wpos, goalPos);
+                if(nDistSq <= goalRangeSq) { return false; }
+                if(eDistSq <= goalRangeSq) { return false; }
+                if(sDistSq <= goalRangeSq) { return false; }
+                if(wDistSq <= goalRangeSq) { return false; }
 
                 //Enqueue neighbours if can
                 bool nEnqueueable = !bfsArray.IsSet(localIndicies_N_E_S_W.x);
