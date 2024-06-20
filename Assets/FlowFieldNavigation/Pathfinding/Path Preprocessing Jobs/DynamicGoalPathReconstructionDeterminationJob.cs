@@ -47,7 +47,8 @@ namespace FlowFieldNavigation
                 while(updateSeedEnumerator.MoveNext() && !canNotReach)
                 {
                     int seed = updateSeedEnumerator.Current;
-                    canNotReach = IsOutOfReach(seed, goalIndex2d, destination, PathGoalRanges[curPathIndex], offset, bfsArray, bfsQueue);
+                    float goalRange = PathGoalRanges[curPathIndex];
+                    canNotReach = IsOutOfReach(seed, goalIndex2d, destination, goalRange * goalRange, offset, bfsArray, bfsQueue);
                     bfsArray.Clear();
                     bfsQueue.Clear();
                 }
@@ -69,7 +70,6 @@ namespace FlowFieldNavigation
 
             //If not already reached goal, run the bfs
             LocalIndex1d seedLocal = FlowFieldUtilities.GetLocal1D(seedGeneral1d, FieldColAmount, SectorColAmount, SectorMatrixColAmount);
-            LocalIndex1d targetLocal = FlowFieldUtilities.GetLocal1D(goalGeneral2d, SectorColAmount, SectorMatrixColAmount);
             int bfsSector = seedLocal.sector;
             int bfsSectorCostStartIndex = bfsSector * SectorTileAmount;
             UnsafeListReadOnly<byte> costs = CostFields[costFieldOffset];
