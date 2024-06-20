@@ -14,7 +14,7 @@ namespace FlowFieldNavigation
         [ReadOnly] internal NativeArray<int> PathFlockIndexArray;
         [ReadOnly] internal NativeArray<int> AgentCurPathIndicies;
         [ReadOnly] internal NativeArray<float> PathDesiredRanges;
-        [WriteOnly] internal NativeArray<int> AgentNewPathIndicies;
+        internal NativeArray<int> AgentNewPathIndicies;
         internal NativeArray<PathRoutineData> PathRoutineDataArray;
         internal NativeList<PathRequest> PathRequests;
         internal NativeHashMap<int, int> FlockIndexToPathRequestIndex;
@@ -59,6 +59,8 @@ namespace FlowFieldNavigation
             {
                 int curPathIndex = AgentCurPathIndicies[i];
                 if (curPathIndex == -1) { continue; }
+                int newPathIndex = AgentNewPathIndicies[i];
+                if(newPathIndex != -1) { continue; }
                 PathRoutineData curRoutineData = PathRoutineDataArray[curPathIndex];
                 PathState curPathState = PathStateArray[curPathIndex];
                 if (curPathState == PathState.Removed || !curRoutineData.PathReconstructionFlag) { continue; }
