@@ -104,7 +104,11 @@ namespace FlowFieldNavigation
                 PathDestinationDataArray[index] = destinationData;
 
                 PathRoutineData organizationData = PathOrganizationDataArray[index];
-                organizationData.DestinationState = oldDestinationIndex.Equals(newActualDestinationIndex) ? DynamicDestinationState.None : DynamicDestinationState.Moved;
+                bool goalIndexChanged = !oldDestinationIndex.Equals(newActualDestinationIndex);
+                bool goalPosChanged = !oldDestination.Equals(newActualDestinationIndex);
+                bool goalIsRanged = newActualRange != 0;
+                bool goalMoved = goalIndexChanged || (goalIsRanged && goalPosChanged);
+                organizationData.DestinationState =  goalMoved ? DynamicDestinationState.Moved : DynamicDestinationState.None;
                 organizationData.DestinationState = rangeChanged ? DynamicDestinationState.OutOfReach : organizationData.DestinationState;
                 PathOrganizationDataArray[index] = organizationData;
             }
