@@ -36,6 +36,7 @@ namespace FlowFieldNavigation
             int sectorColAmount = SectorColAmount;
             int sectorTileAmount = SectorTileAmount;
             int sectorMatrixColAmount = SectorMatrixColAmount;
+            int sectorMatrixRowAmount = SectorMatrixRowAmount;
             int fieldRowAmount = FieldRowAmount;
             int fieldColAmount = FieldColAmount;
             float tileSize = TileSize;
@@ -238,16 +239,6 @@ namespace FlowFieldNavigation
                 swGeneral2d = FlowFieldUtilities.GetGeneral2d(swLocal1d, swSector1d, sectorMatrixColAmount, sectorColAmount);
                 nwGeneral2d = FlowFieldUtilities.GetGeneral2d(nwLocal1d, nwSector1d, sectorMatrixColAmount, sectorColAmount);
 
-                //Are tiles at border
-                bool nBorder = nGeneral2d.y >= fieldRowAmount - 1;
-                bool eBorder = eGeneral2d.x >= fieldColAmount - 1;
-                bool sBorder = sGeneral2d.y < 1;
-                bool wBorder = wGeneral2d.x < 1;
-                bool neBorder = nBorder || eBorder;
-                bool seBorder = sBorder || eBorder;
-                bool swBorder = sBorder || wBorder;
-                bool nwBorder = nBorder || wBorder;
-
                 //SECTOR MARKS
                 curSectorMark = sectorToPickedTable[curSector1d];
                 nSectorMark = sectorToPickedTable[nSector1d];
@@ -433,6 +424,19 @@ namespace FlowFieldNavigation
                 nwSector1d = math.select(curSector1d, curSector1d + sectorMatrixColAmount, nLocalOverflow);
                 nwSector1d = math.select(nwSector1d, nwSector1d - 1, wLocalOverflow);
 
+                bool nSectorOverflow = nSector1d >= sectorMatrixColAmount * sectorMatrixRowAmount;
+                bool eSectorOverflow = (eSector1d % sectorMatrixColAmount) == 0;
+                bool sSectorOverflow = sSector1d < 0;
+                bool wSectorOverflow = (curSector1d % sectorMatrixColAmount) == 0;
+
+                nSector1d = math.select(nSector1d, curSector1d, nSectorOverflow);
+                eSector1d = math.select(eSector1d, curSector1d, eSectorOverflow);
+                sSector1d = math.select(sSector1d, curSector1d, sSectorOverflow);
+                wSector1d = math.select(wSector1d, curSector1d, wSectorOverflow);
+                neSector1d = math.select(neSector1d, curSector1d, nSectorOverflow || eSectorOverflow);
+                seSector1d = math.select(seSector1d, curSector1d, sSectorOverflow || eSectorOverflow);
+                swSector1d = math.select(swSector1d, curSector1d, sSectorOverflow || wSectorOverflow);
+                nwSector1d = math.select(nwSector1d, curSector1d, nSectorOverflow || wSectorOverflow);
 
                 nLocal1d = math.select(nLocal1d, curLocal1d - (sectorColAmount * sectorColAmount - sectorColAmount), nLocalOverflow);
                 eLocal1d = math.select(eLocal1d, curLocal1d - sectorColAmount + 1, eLocalOverflow);
@@ -491,6 +495,10 @@ namespace FlowFieldNavigation
                 //COSTS
                 bool nCostUnwalkable = costs[nSector1d * sectorTileAmount + nLocal1d] == byte.MaxValue;
                 bool eCostUnwalkable = costs[eSector1d * sectorTileAmount + eLocal1d] == byte.MaxValue;
+                if ((sSector1d * sectorTileAmount + sLocal1d) < 0)
+                {
+                    UnityEngine.Debug.Log((sSector1d * sectorTileAmount + sLocal1d) + "\n" + sLocal1d + "\n" + sSector1d+"\n"+curSector1d+"\n"+sectorMatrixColAmount);
+                }
                 bool sCostUnwalkable = costs[sSector1d * sectorTileAmount + sLocal1d] == byte.MaxValue;
                 bool wCostUnwalkable = costs[wSector1d * sectorTileAmount + wLocal1d] == byte.MaxValue;
                 bool neCostUnwalkable = costs[neSector1d * sectorTileAmount + neLocal1d] == byte.MaxValue;
