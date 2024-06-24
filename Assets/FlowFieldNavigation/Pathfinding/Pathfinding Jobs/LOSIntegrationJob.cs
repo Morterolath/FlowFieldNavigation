@@ -495,10 +495,6 @@ namespace FlowFieldNavigation
                 //COSTS
                 bool nCostUnwalkable = costs[nSector1d * sectorTileAmount + nLocal1d] == byte.MaxValue;
                 bool eCostUnwalkable = costs[eSector1d * sectorTileAmount + eLocal1d] == byte.MaxValue;
-                if ((sSector1d * sectorTileAmount + sLocal1d) < 0)
-                {
-                    UnityEngine.Debug.Log((sSector1d * sectorTileAmount + sLocal1d) + "\n" + sLocal1d + "\n" + sSector1d+"\n"+curSector1d+"\n"+sectorMatrixColAmount);
-                }
                 bool sCostUnwalkable = costs[sSector1d * sectorTileAmount + sLocal1d] == byte.MaxValue;
                 bool wCostUnwalkable = costs[wSector1d * sectorTileAmount + wLocal1d] == byte.MaxValue;
                 bool neCostUnwalkable = costs[neSector1d * sectorTileAmount + neLocal1d] == byte.MaxValue;
