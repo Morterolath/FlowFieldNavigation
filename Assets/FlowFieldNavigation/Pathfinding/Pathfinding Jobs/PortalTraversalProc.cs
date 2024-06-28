@@ -18,7 +18,11 @@ namespace FlowFieldNavigation
             float fieldTileSize,
             float2 fieldGridStartPos,
             int sectorMatrixColAmount,
+            int sectorMatrixRowAmount,
             int newPortalSliceStartIndex,
+            int newPickedSectorStartIndex,
+            int losRange,
+
 
             NativeList<PickedPortalDataRecord> pickedPortalDataRecord,
             NativeArray<byte> costs,
@@ -36,7 +40,8 @@ namespace FlowFieldNavigation
             NativeArray<int> secToWinPtrs,
             NativeArray<PortalNode> portalNodes,
             NativeArray<UnsafeList<int>> islandFields,
-            NativeHashSet<int> possibleGoalSectors
+            NativeHashSet<int> possibleGoalSectors,
+            NativeReference<SectorsWihinLOSArgument> sectorWithinLosRange
             )
         {
             sourcePortalIndexList.Clear();
@@ -69,6 +74,7 @@ namespace FlowFieldNavigation
             AddGoalSector();
 
             //check if new sectors contain a sector in los range
+            CheckLOSUpadte();
 
             //set new integration field length
             SetNewIntegrationFieldLength();
@@ -76,6 +82,47 @@ namespace FlowFieldNavigation
             //clear portalDataArray
             ClearPortalTraversalDataArray();
 
+            void CheckLOSUpadte()
+            {
+                int newAddedSectorStart = newPickedSectorStartIndex;
+                int newAddedSectorCount = pickedSectorList.Length - newAddedSectorStart;
+                NativeSlice<int> newAddedSectors = new NativeSlice<int>(pickedSectorList.AsArray(), newAddedSectorStart, newAddedSectorCount);
+                if (ContainsSectorsWithinLOSRange(newAddedSectors))
+                {
+                    SectorsWihinLOSArgument argument = sectorWithinLosRange.Value;
+                    argument |= SectorsWihinLOSArgument.AddedSectorWithinLOS;
+                    sectorWithinLosRange.Value = argument;
+                }
+
+            }
+            bool ContainsSectorsWithinLOSRange(NativeSlice<int> sectors)
+            {
+                int2 targetSector2d = FlowFieldUtilities.GetSector2D(goalIndex, sectorColAmount);
+                int extensionLength = losRange / sectorColAmount + math.select(0, 1, losRange % sectorColAmount > 0);
+                int2 rangeTopRightSector = targetSector2d + new int2(extensionLength, extensionLength);
+                int2 rangeBotLeftSector = targetSector2d - new int2(extensionLength, extensionLength);
+                rangeTopRightSector = new int2()
+                {
+                    x = math.select(rangeTopRightSector.x, sectorMatrixColAmount - 1, rangeTopRightSector.x >= sectorMatrixColAmount),
+                    y = math.select(rangeTopRightSector.y, sectorMatrixRowAmount - 1, rangeTopRightSector.y >= sectorMatrixRowAmount)
+                };
+                rangeBotLeftSector = new int2()
+                {
+                    x = math.select(rangeBotLeftSector.x, 0, rangeBotLeftSector.x < 0),
+                    y = math.select(rangeBotLeftSector.y, 0, rangeBotLeftSector.y < 0)
+                };
+                for (int i = 0; i < sectors.Length; i++)
+                {
+                    int sector1d = sectors[i];
+                    int sectorCol = sector1d % sectorMatrixColAmount;
+                    int sectorRow = sector1d / sectorMatrixColAmount;
+
+                    bool withinColRange = sectorCol >= rangeBotLeftSector.x && sectorCol <= rangeTopRightSector.x;
+                    bool withinRowRange = sectorRow >= rangeBotLeftSector.y && sectorRow <= rangeTopRightSector.y;
+                    if (withinColRange && withinRowRange) { return true; }
+                }
+                return false;
+            }
             void SubmitPickedMarks()
             {
                 for (int i = 0; i < pickedPortalDataRecord.Length; i++)

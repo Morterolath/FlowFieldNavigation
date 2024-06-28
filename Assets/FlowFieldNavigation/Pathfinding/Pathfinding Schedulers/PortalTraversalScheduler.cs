@@ -85,6 +85,9 @@ namespace FlowFieldNavigation
                     IntegrationField = pathInternalData.IntegrationField,
                     PossibleGoalSectors = alreadyConsideredGoalSectorIndexMap,
                     PickedPortalDataRecords = portalTraversalData.PickedPortalDataRecords,
+                    LosRange = FlowFieldUtilities.LOSRange,
+                    SectorWithinLosRange = pathInternalData.SectorWithinLOSState,
+                    NewPickedSectorStartIndex = pathInternalData.PickedSectorList.Length,
                 };
                 JobHandle travHandle = newPortalTraversalJob.Schedule(dependency);
 

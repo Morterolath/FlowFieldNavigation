@@ -19,6 +19,10 @@ namespace FlowFieldNavigation
         internal int SectorMatrixColAmount;
         internal int SectorMatrixRowAmount;
         internal int SectorTileAmount;
+        internal int LosRange;
+        internal int NewPickedSectorStartIndex;
+
+        internal NativeReference<SectorsWihinLOSArgument> SectorWithinLosRange;
         internal NativeArray<PortalTraversalData> PortalTraversalDataArray;
         internal NativeList<ActivePortal> PortalSequence;
         internal NativeList<Slice> PortalSequenceSlices;
@@ -48,7 +52,10 @@ namespace FlowFieldNavigation
                 TileSize,
                 FieldGridStartPos,
                 SectorMatrixColAmount,
+                SectorMatrixRowAmount,
                 NewPortalSliceStartIndex,
+                NewPickedSectorStartIndex,
+                LosRange,
                 PickedPortalDataRecords,
                 Costs,
                 IntegrationField,
@@ -65,7 +72,8 @@ namespace FlowFieldNavigation
                 SecToWinPtrs,
                 PortalNodes,
                 IslandFields,
-                PossibleGoalSectors);
+                PossibleGoalSectors,
+                SectorWithinLosRange);
         }
     }
 }
