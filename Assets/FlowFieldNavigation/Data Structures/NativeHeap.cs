@@ -1,6 +1,5 @@
 using Unity.Burst;
 using Unity.Collections;
-using Unity.Collections.LowLevel.Unsafe;
 using Unity.Mathematics;
 
 namespace FlowFieldNavigation
@@ -22,6 +21,10 @@ namespace FlowFieldNavigation
             {
                 return _array.IsEmpty;
             }
+        }
+        internal int Length
+        {
+            get { return _array.Length; }
         }
         internal NativeHeap(int size, Allocator allocator)
         {

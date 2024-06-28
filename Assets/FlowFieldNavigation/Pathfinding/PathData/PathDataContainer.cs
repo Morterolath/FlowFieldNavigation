@@ -112,12 +112,11 @@ namespace FlowFieldNavigation
                     portalTraversalData.GoalDataList.Dispose();
                     internalData.SectorToWaveFrontsMap.Dispose();
                     internalData.IntegrationField.Dispose();
-                    portalTraversalData.NewExploredPortalIndicies.Dispose();
-                    portalTraversalData.PortalDataRecords.Dispose();
                     internalData.LOSCalculatedFlag.Dispose();
                     internalData.FlowFieldCalculationBuffer.Dispose();
                     sectorToFlowStartTable.Dispose();
                     portalTraversalData.NewPathUpdateSeedIndicies.Dispose();
+                    portalTraversalData.PickedPortalDataRecords.Dispose();
                     PathIndexToUpdateSeedsMap.Remove(i);
                     PathGoalNeighbourIndexToGoalIndexMaps[i].Dispose();
                     PathGoalTraversalDataFieldIndexLists[i].Dispose();
@@ -229,9 +228,8 @@ namespace FlowFieldNavigation
                 PathAdditionSequenceSliceStartIndex = preallocations.PathAdditionSequenceBorderStartIndex,
                 DiskstraStartIndicies = preallocations.DijkstraStartIndicies,
                 GoalDataList = new NativeList<PortalTraversalData>(Allocator.Persistent),
-                NewExploredPortalIndicies = new NativeList<int>(Allocator.Persistent),
-                PortalDataRecords = new NativeList<PortalTraversalDataRecord>(Allocator.Persistent),
                 NewPathUpdateSeedIndicies = new NativeList<int>(Allocator.Persistent),
+                PickedPortalDataRecords = new NativeList<PickedPortalDataRecord>(Allocator.Persistent),
             };
 
             NativeArray<OverlappingDirection> sectorOverlappingDirections = new NativeArray<OverlappingDirection>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent);

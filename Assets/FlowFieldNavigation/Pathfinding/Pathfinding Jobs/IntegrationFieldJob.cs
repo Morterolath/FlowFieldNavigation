@@ -104,7 +104,7 @@ namespace FlowFieldNavigation
                     int2 general2d = FlowFieldUtilities.GetGeneral2d(i, sectorIndex, SectorMatrixColAmount, sectorColAmount);
                     float2 centerPos = FlowFieldUtilities.IndexToPos(general2d, TileSize, FieldGridStartPos);
                     float distanceToGoal = math.distance(Goal, centerPos);
-                    if (distanceToGoal > GoalRange || TargetIndex.Equals(general2d)) { continue; }
+                    if (distanceToGoal > GoalRange && !TargetIndex.Equals(general2d)) { continue; }
 
                     IntegrationTile goalTile = integrationFieldSector[i];
                     goalTile.Cost = 0f;

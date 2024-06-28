@@ -56,80 +56,38 @@ namespace FlowFieldNavigation
                 NativeArray<PortalTraversalData> porTravDataArray = _porTravDataProvider.GetAvailableData(out JobHandle dependency);
                 NativeSlice<float2> pathRequestSource = new NativeSlice<float2>(sources, pathReqSourceSlice.Index, pathReqSourceSlice.Count);
 
-                //Graph Reduction
-                PortalReductionJob reductionJob = new PortalReductionJob()
+                NewPortalTraversalJob newPortalTraversalJob = new NewPortalTraversalJob()
                 {
-                    DestinationType = destinationData.DestinationType,
-                    GoalPosition = destinationData.Destination,
-                    GoalRange = goalRange,
                     IslandSeed = islandSeed,
                     TileSize = FlowFieldUtilities.TileSize,
-                    GoalIndex = destinationIndex,
                     FieldColAmount = FlowFieldUtilities.FieldColAmount,
-                    FieldRowAmount = FlowFieldUtilities.FieldRowAmount,
-                    FieldTileSize = FlowFieldUtilities.TileSize,
                     SectorColAmount = FlowFieldUtilities.SectorColAmount,
                     SectorMatrixColAmount = FlowFieldUtilities.SectorMatrixColAmount,
                     SectorTileAmount = FlowFieldUtilities.SectorTileAmount,
                     FieldGridStartPos = FlowFieldUtilities.FieldGridStartPosition,
-                    PickedToSector = pathInternalData.PickedSectorList,
+                    SectorMatrixRowAmount = FlowFieldUtilities.SectorMatrixRowAmount,
                     PortalNodes = pickedFieldGraph.PortalNodes,
                     SecToWinPtrs = pickedFieldGraph.SecToWinPtrs,
                     WindowNodes = pickedFieldGraph.WindowNodes,
-                    WinToSecPtrs = pickedFieldGraph.WinToSecPtrs,
                     SourcePositions = pathRequestSource,
                     PorPtrs = pickedFieldGraph.PorToPorPtrs,
                     SectorNodes = pickedFieldGraph.SectorNodes,
                     Costs = pickedCostField.Costs,
-                    LocalDirections = _navigationManager.FieldDataContainer.GetSectorDirections(),
                     PortalTraversalDataArray = porTravDataArray,
                     SourcePortalIndexList = portalTraversalData.SourcePortalIndexList,
                     IslandFields = pickedFieldGraph.IslandFields,
                     SectorStateTable = sectorStateTable,
-                    DijkstraStartIndicies = portalTraversalData.DiskstraStartIndicies,
-                    GoalTraversalDataList = portalTraversalData.GoalDataList,
-                    NewExploredPortalIndicies = portalTraversalData.NewExploredPortalIndicies,
-                    PortalDataRecords = portalTraversalData.PortalDataRecords.AsArray(),
-                    NewExploredUpdateSeedIndicies = portalTraversalData.NewPathUpdateSeedIndicies,
-                    GoalNeighborIndexToGoalIndexMap = goalNeighborIndexToGoalIndexMap,
-                    GoalTraversalDataFieldIndexList = goalTraversalDataFieldIndexList,
-                    AlreadyConsideredGoalSectorIndicies = alreadyConsideredGoalSectorIndexMap,
-                };
-                JobHandle reductHandle = reductionJob.Schedule(dependency);
-                if (FlowFieldUtilities.DebugMode) { reductHandle.Complete(); }
-
-                //Graph Traversal
-                PortalTraversalJob traversalJob = new PortalTraversalJob()
-                {
-                    FieldColAmount = FlowFieldUtilities.FieldColAmount,
                     Target = destinationIndex,
-                    SectorColAmount = FlowFieldUtilities.SectorColAmount,
-                    SectorMatrixColAmount = FlowFieldUtilities.SectorMatrixColAmount,
-                    SectorMatrixRowAmount = FlowFieldUtilities.SectorMatrixRowAmount,
-                    SectorTileAmount = FlowFieldUtilities.SectorTileAmount,
-                    LOSRange = FlowFieldUtilities.LOSRange,
-                    DijkstraStartIndicies = portalTraversalData.DiskstraStartIndicies,
-                    SectorWithinLOSState = pathInternalData.SectorWithinLOSState,
-                    NewPickedSectorStartIndex = portalTraversalData.NewPickedSectorStartIndex,
                     NewPortalSliceStartIndex = portalTraversalData.PathAdditionSequenceSliceStartIndex.Value,
                     PickedSectorIndicies = pathInternalData.PickedSectorList,
                     PortalSequenceSlices = portalTraversalData.PortalSequenceSlices,
-                    PortalNodes = pickedFieldGraph.PortalNodes,
-                    WindowNodes = pickedFieldGraph.WindowNodes,
-                    WinToSecPtrs = pickedFieldGraph.WinToSecPtrs,
-                    PorPtrs = pickedFieldGraph.PorToPorPtrs,
-                    SectorNodes = pickedFieldGraph.SectorNodes,
                     PortalSequence = portalTraversalData.PortalSequence,
-                    IntegrationField = pathInternalData.IntegrationField, 
-                    PortalTraversalDataArray = porTravDataArray,
-                    SectorStateTable = sectorStateTable,
-                    SourcePortalIndexList = portalTraversalData.SourcePortalIndexList,
-                    NewExploredPortalIndicies = portalTraversalData.NewExploredPortalIndicies,
-                    PortalDataRecords = portalTraversalData.PortalDataRecords,
-                    GoalTraversalDataFieldIndexList = goalTraversalDataFieldIndexList,
-                    GoalNeighborIndexToGoalIndexMap = goalNeighborIndexToGoalIndexMap,
+                    IntegrationField = pathInternalData.IntegrationField,
+                    PossibleGoalSectors = alreadyConsideredGoalSectorIndexMap,
+                    PickedPortalDataRecords = portalTraversalData.PickedPortalDataRecords,
                 };
-                JobHandle travHandle = traversalJob.Schedule(reductHandle);
+                JobHandle travHandle = newPortalTraversalJob.Schedule(dependency);
+
                 _porTravDataProvider.IncerimentPointer(travHandle);
                 if (FlowFieldUtilities.DebugMode) { travHandle.Complete(); }
 

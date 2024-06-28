@@ -37,6 +37,7 @@ namespace FlowFieldNavigation
         [SerializeField] bool _debugDesiredGoal;
         [SerializeField] bool _debugActiveWaveFronts;
         [SerializeField] bool _debugPortalTraversalMarks;
+        [SerializeField] bool _debugAStarPickedPortals;
         [SerializeField] bool _debugPortalTargetNeighbours;
         [SerializeField] bool _debugPortalSequence;
         [SerializeField] bool _debugPickedSectors;
@@ -141,6 +142,7 @@ namespace FlowFieldNavigation
             {
                 if (_debugAroundAgent) { _spatialHashGridDebugger.DebugAgent(AgentToDebug, _gridIndex); }
                 if (_debugPortalTraversalMarks) { _pathDebugger.DebugPortalTraversalMarks(AgentToDebug, _portalHeightBuilder.GetPortalHeights(_costFieldOffset)); }
+                if (_debugAStarPickedPortals) { _pathDebugger.DebugPickedPortals(AgentToDebug, _portalHeightBuilder.GetPortalHeights(_costFieldOffset)); }
                 if (_debugPortalSequence) { _pathDebugger.DebugPortalSequence(AgentToDebug, _portalHeightBuilder.GetPortalHeights(_costFieldOffset)); }
                 if (_debugIntegrationField) { _pathDebugger.DebugIntegrationField(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }
                 if (_debugFlowField) { _pathDebugger.DebugFlowField(AgentToDebug, _tileCenterHeightBuilder.GetTileCenterHeights()); }

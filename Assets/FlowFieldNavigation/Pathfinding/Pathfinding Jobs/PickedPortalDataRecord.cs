@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace FlowFieldNavigation
 {
-    internal struct PortalTraversalDataRecord
+    internal struct PickedPortalDataRecord
     {
         internal int PortalIndex;
-        internal int NextIndex;
-        internal float DistanceFromTarget;
-        internal PortalTraversalMark Mark;
+        internal int OriginIndex;
+        internal int PortalCountToGoal;
+        internal float GCost;
     }
 }

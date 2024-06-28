@@ -247,8 +247,36 @@ namespace FlowFieldNavigation
                 Gizmos.DrawLine(pos, targetPos);
             }
         }
-        internal void DebugPortalTraversalMarks(FlowFieldAgent agent, NativeArray<float> portalHeights)
+        internal void DebugPickedPortals(FlowFieldAgent agent, NativeArray<float> portalHeights)
         {
+            if (_pathContainer == null) { return; }
+            if (_pathContainer.PathfindingInternalDataList.Count == 0) { return; }
+            int pathIndex = agent.GetPathIndex();
+            if (pathIndex == -1) { return; }
+
+
+            PathPortalTraversalData portalTraversalData = _pathContainer.PathPortalTraversalDataList[pathIndex];
+            PathDestinationData destinationData = _navigationManager.PathDataContainer.PathDestinationDataList[pathIndex];
+            float tileSize = FlowFieldUtilities.TileSize;
+            FieldGraph fg = _fieldProducer.GetFieldGraphWithOffset(destinationData.Offset);
+            NativeArray<PortalNode> portalNodes = fg.PortalNodes;
+            NativeArray<PickedPortalDataRecord> pickedPortalDataRecords = portalTraversalData.PickedPortalDataRecords.AsArray();
+
+            for (int i = 0; i < pickedPortalDataRecords.Length; i++)
+            {
+                PickedPortalDataRecord record = pickedPortalDataRecords[i];
+                PortalNode node = portalNodes[record.PortalIndex];
+                Vector3 portalPos = node.GetPosition(tileSize, FlowFieldUtilities.FieldGridStartPosition);
+                portalPos.y = portalHeights[record.PortalIndex];
+                Vector3 labelPos = portalPos + new Vector3(0, 3, 0);
+                Gizmos.color = Color.black;
+                Gizmos.DrawSphere(portalPos + new Vector3(0.35f, 0, 0), 0.25f);
+                Handles.Label(labelPos, record.PortalIndex + " : " + record.GCost.ToString());
+            }
+
+        }
+        internal void DebugPortalTraversalMarks(FlowFieldAgent agent, NativeArray<float> portalHeights)
+        {/*
             if (_pathContainer == null) { return; }
             if (_pathContainer.PathfindingInternalDataList.Count == 0) { return; }
             int pathIndex = agent.GetPathIndex();
@@ -269,17 +297,17 @@ namespace FlowFieldNavigation
                 Vector3 portalPos = node.GetPosition(tileSize, FlowFieldUtilities.FieldGridStartPosition);
                 portalPos.y = portalHeights[record.PortalIndex];
                 Vector3 labelPos = portalPos + new Vector3(0, 3, 0);
-                if ((record.Mark & PortalTraversalMark.Explored) == PortalTraversalMark.Explored)
+                if ((record.Mark & PortalTraversalMark.AStarTraversed) == PortalTraversalMark.AStarTraversed)
                 {
                     Gizmos.color = Color.red;
                     Gizmos.DrawSphere(portalPos, 0.25f);
                 }
-                if ((record.Mark & PortalTraversalMark.DijkstraPicked) == PortalTraversalMark.DijkstraPicked)
+                if ((record.Mark & PortalTraversalMark.AStarExtracted) == PortalTraversalMark.AStarExtracted)
                 {
                     Gizmos.color = Color.white;
                     Gizmos.DrawSphere(portalPos + new Vector3(-0.35f, 0, 0), 0.25f);
                 }
-                if ((record.Mark & PortalTraversalMark.DijkstraTraversable) == PortalTraversalMark.DijkstraTraversable)
+                if ((record.Mark & PortalTraversalMark.AStarPicked) == PortalTraversalMark.AStarPicked)
                 {
                     Gizmos.color = Color.black;
                     Gizmos.DrawSphere(portalPos + new Vector3(0.35f, 0, 0), 0.25f);
@@ -290,7 +318,7 @@ namespace FlowFieldNavigation
                     Gizmos.DrawSphere(portalPos + new Vector3(0,0,0.35f), 0.25f);
                 }
                 Handles.Label(labelPos, record.PortalIndex + " : " + record.DistanceFromTarget.ToString());
-            }
+            }*/
         }
         internal void DebugPortalSequence(FlowFieldAgent agent, NativeArray<float> portalHeights)
         {
@@ -356,6 +384,7 @@ namespace FlowFieldNavigation
                     Vector2 pos = FlowFieldUtilities.IndexToPos(general2d, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
                     Vector3 pos3 = new Vector3(pos.x, 0f, pos.y);
                     Gizmos.DrawCube(pos3, new Vector3(0.5f, 0.5f, 0.5f));
+                    Handles.Label(pos3 + new Vector3(0,3,0), front.Distance.ToString());
                 }
             }
 

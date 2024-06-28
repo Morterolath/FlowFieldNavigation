@@ -39,37 +39,6 @@ namespace FlowFieldNavigation
                 }
             }
         }
-        internal NativeArray<PortalTraversalData> GetPortalTraversalDataArray(int offset)
-        {
-            List<NativeArray<PortalTraversalData>> _preallocations = _preallocationMatrix[offset];
-            if (_preallocations.Count == 0)
-            {
-                NativeArray<PortalTraversalData> newTravData = new NativeArray<PortalTraversalData>(_portalNodeAmounts[offset], Allocator.Persistent);
-                PortalTraversalDataArrayCleaningJob cleaninJob = new PortalTraversalDataArrayCleaningJob()
-                {
-                    Array = newTravData,
-                };
-                cleaninJob.Schedule().Complete();
-                return newTravData;
-            }
-            NativeArray<PortalTraversalData> array = _preallocations[_preallocations.Count - 1];
-            _preallocations.RemoveAtSwapBack(_preallocations.Count - 1);
-            return array;
-        }
-        internal void SendPortalTraversalDataArray(NativeArray<PortalTraversalData> array, int offset)
-        {
-            PortalTraversalDataArrayCleaningJob cleaninJob = new PortalTraversalDataArrayCleaningJob()
-            {
-                Array = array,
-            };
-            CleaningHandle cleaningHandle = new CleaningHandle()
-            {
-                handle = cleaninJob.Schedule(),
-                Offset = offset,
-                Array = array,
-            };
-            _cleaningHandles.Add(cleaningHandle);
-        }
 
         struct CleaningHandle
         {
