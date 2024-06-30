@@ -1080,8 +1080,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac6ee70bed3cb45468183ef0b5f49189, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sectorCount: 3600
-  batch: 16
+  GoalRange: 30
+  GoalPosition:
+    x: 0
+    y: 0
 --- !u!1 &1676759290
 GameObject:
   m_ObjectHideFlags: 0
