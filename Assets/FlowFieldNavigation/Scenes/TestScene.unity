@@ -454,7 +454,7 @@ PrefabInstance:
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
       propertyPath: RowAmount
-      value: 200
+      value: 500
       objectReference: {fileID: 0}
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
@@ -464,7 +464,7 @@ PrefabInstance:
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
       propertyPath: ColumnAmount
-      value: 200
+      value: 500
       objectReference: {fileID: 0}
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
@@ -1080,10 +1080,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac6ee70bed3cb45468183ef0b5f49189, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GoalRange: 30
-  GoalPosition:
+  center:
     x: 0
     y: 0
+  radius: 100
 --- !u!1 &1676759290
 GameObject:
   m_ObjectHideFlags: 0
