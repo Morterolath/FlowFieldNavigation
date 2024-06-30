@@ -115,7 +115,7 @@ namespace FlowFieldNavigation
 
             SourceCount = 0;
             SourcePositionStartIndex = 0;
-            PathIndex = 0;
+            PathIndex = -1;
         }
         internal bool IsValid() => SourceCount != 0;
     }

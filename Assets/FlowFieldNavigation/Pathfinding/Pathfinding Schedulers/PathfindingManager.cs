@@ -40,6 +40,7 @@ namespace FlowFieldNavigation
         NativeList<int> _hashMapPathIndicies;
         NativeList<UnsafeListReadOnly<byte>> _costFieldCosts;
         NativeList<PathRequest> _requestedPaths;
+        NativeReference<int> _newPathlistLength;
         List<JobHandle> _pathfindingTaskOrganizationHandle;
         internal PathfindingManager(FlowFieldNavigationManager navigationManager)
         {
@@ -71,6 +72,7 @@ namespace FlowFieldNavigation
             _agentPositions = new NativeList<float3>(Allocator.Persistent);
             _costFieldCosts = new NativeList<UnsafeListReadOnly<byte>>(Allocator.Persistent);
             _requestedPaths = new NativeList<PathRequest>(Allocator.Persistent);
+            _newPathlistLength = new NativeReference<int>(Allocator.Persistent);
         }
         internal void DisposeAll()
         {
@@ -145,6 +147,7 @@ namespace FlowFieldNavigation
             NativeArray<float> PathDesiredRanges = _pathContainer.PathDesiredRanges.AsArray();
             NativeArray<float> pathRanges = _pathContainer.PathRanges.AsArray();
             NativeArray<int> pathIslandSeedsAsFieldIndex = _pathContainer.PathIslandSeedsAsFieldIndicies.AsArray();
+            NativeList<int> unusedPathIndexList = _pathContainer.UnusedPathIndexList;
 
             //Copy agent positions from transforms
             _agentPositions.Length = agentTransforms.length;
@@ -473,7 +476,22 @@ namespace FlowFieldNavigation
             };
             JobHandle sourceSubmitHandle = sourceSubmit.Schedule(JobHandle.CombineDependencies(combinedExpansionHanlde, islandDerivationHandle));
             if (FlowFieldUtilities.DebugMode) { sourceSubmitHandle.Complete(); }
-            _pathfindingTaskOrganizationHandle.Add(sourceSubmitHandle);
+
+            //Determina final path request path indicies
+            FinalPathRequestPathIndexDeterminationJob pathIndexDetermination = new FinalPathRequestPathIndexDeterminationJob()
+            {
+                CurrentPathListLength = pathDestinationDataArray.Length,
+                FinalPathRequests = _finalPathRequests,
+                NewPathListLength = _newPathlistLength,
+                UnusedPathIndexList = unusedPathIndexList,
+            };
+            JobHandle pathIndexDetHandle = pathIndexDetermination.Schedule(sourceSubmitHandle);
+            if (FlowFieldUtilities.DebugMode) { pathIndexDetHandle.Complete(); }
+
+            //run goal sector query for ranged paths
+            //  add sectors to multihashmap k=path index v=sector index
+            //  extract goal portals from sectors using bfs, add those portals to another multihashmap
+            _pathfindingTaskOrganizationHandle.Add(pathIndexDetHandle);
         }
         void CompletePathEvaluation()
         {
@@ -486,20 +504,20 @@ namespace FlowFieldNavigation
             }
 
             //Allocate new paths and set their routine data
+            _pathContainer.ResizePathLists(_newPathlistLength.Value);
             for (int i = 0; i < _finalPathRequests.Length; i++)
             {
                 FinalPathRequest currentpath = _finalPathRequests[i];
                 if (!currentpath.IsValid()) { continue; }
                 float2 randomSourcePointForIslandSeed = _sourcePositions[currentpath.SourcePositionStartIndex];
-                int newPathIndex = _pathContainer.CreatePath(currentpath, randomSourcePointForIslandSeed);
-                PathRoutineData routineData = _pathContainer.PathRoutineDataList[newPathIndex];
+                _pathContainer.CreatePath(currentpath, randomSourcePointForIslandSeed);
+                PathRoutineData routineData = _pathContainer.PathRoutineDataList[currentpath.PathIndex];
                 routineData.Task |= PathTask.FlowRequest;
                 routineData.Task |= PathTask.PathAdditionRequest;
                 routineData.PathAdditionSourceStart = currentpath.SourcePositionStartIndex;
                 routineData.PathAdditionSourceCount = currentpath.SourceCount;
-                _pathContainer.PathRoutineDataList[newPathIndex] = routineData;
-                _newPathIndicies.Add(newPathIndex);
-                currentpath.PathIndex = newPathIndex;
+                _pathContainer.PathRoutineDataList[currentpath.PathIndex] = routineData;
+                _newPathIndicies.Add(currentpath.PathIndex);
                 _finalPathRequests[i] = currentpath;
             }
             _pathfindingPipeline.Run(_sourcePositions.AsArray(), _expandedPathIndicies, _destinationUpdatedPathIndicies);

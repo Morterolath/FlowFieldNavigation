@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using Codice.Client.BaseCommands.Download;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Mathematics;
+using UnityEditor.PackageManager.Requests;
 
 namespace FlowFieldNavigation
 {
@@ -34,16 +36,16 @@ namespace FlowFieldNavigation
         internal List<NativeHashSet<int>> PathAlreadyConsideredSectorIndexMaps;
         internal NativeList<int> PathIslandSeedsAsFieldIndicies;
         internal NativeParallelMultiHashMap<int, int> PathIndexToUpdateSeedsMap;
-        Stack<int> _removedPathIndicies;
+        internal NativeList<int> UnusedPathIndexList;
 
         FieldDataContainer _fieldProducer;
         PathPreallocator _preallocator;
         internal PathDataContainer(FlowFieldNavigationManager navigationManager)
         {
             _fieldProducer = navigationManager.FieldDataContainer;
-            PathfindingInternalDataList = new List<PathfindingInternalData>(1);
+            PathfindingInternalDataList = new List<PathfindingInternalData>();
             _preallocator = new PathPreallocator(_fieldProducer, FlowFieldUtilities.SectorTileAmount, FlowFieldUtilities.SectorMatrixTileAmount);
-            _removedPathIndicies = new Stack<int>();
+            UnusedPathIndexList = new NativeList<int>(Allocator.Persistent);
             PathSubscriberCounts = new NativeList<int>(Allocator.Persistent);
             PathSectorStateTableList = new NativeList<UnsafeList<PathSectorState>>(Allocator.Persistent);
             PathPortalTraversalDataList = new List<PathPortalTraversalData>();
@@ -122,7 +124,7 @@ namespace FlowFieldNavigation
                     PathGoalTraversalDataFieldIndexLists[i].Dispose();
                     ExposedPathStateList[i] = PathState.Removed;
                     PathAlreadyConsideredSectorIndexMaps[i].Dispose();
-                    _removedPathIndicies.Push(i);
+                    UnusedPathIndexList.Add(i);
                     PreallocationPack preallocations = new PreallocationPack()
                     {
                         PickedToSector = internalData.PickedSectorList,
@@ -182,14 +184,32 @@ namespace FlowFieldNavigation
             };
             dataExposeJob.Schedule().Complete();
         }
-        internal int CreatePath(FinalPathRequest request, float2 anySourcePoint)
+        internal void ResizePathLists(int newLength)
+        {
+            int currentCount = PathfindingInternalDataList.Count;
+            for (int i = currentCount; i < newLength; i++)
+            {
+                PathfindingInternalDataList.Add(new PathfindingInternalData());
+                PathPortalTraversalDataList.Add(new PathPortalTraversalData());
+                SectorOverlappingDirectionTableList.Add(new NativeArray<OverlappingDirection>());
+                SectorToFlowStartTables.Add(new NativeArray<int>());
+                PathGoalNeighbourIndexToGoalIndexMaps.Add(new NativeHashMap<int, int>());
+                PathGoalTraversalDataFieldIndexLists.Add(new NativeList<int>());
+                PathAlreadyConsideredSectorIndexMaps.Add(new NativeHashSet<int>());
+            }
+            PathSectorStateTableList.Length = newLength;
+            PathDestinationDataList.Length = newLength;
+            PathRoutineDataList.Length = newLength;
+            PathSectorBitArrays.Length = newLength;
+            PathSubscriberCounts.Length = newLength;
+            PathFlockIndicies.Length = newLength;
+            PathRanges.Length = newLength;
+            PathDesiredRanges.Length = newLength;
+            PathIslandSeedsAsFieldIndicies.Length = newLength;
+        }
+        internal void CreatePath(FinalPathRequest request, float2 anySourcePoint)
         {
             PreallocationPack preallocations = _preallocator.GetPreallocations();
-
-            int pathIndex;
-            if (_removedPathIndicies.Count != 0) { pathIndex = _removedPathIndicies.Pop(); }
-            else { pathIndex = PathfindingInternalDataList.Count; }
-
             PathfindingInternalData internalData = new PathfindingInternalData()
             {
                 PickedSectorList = preallocations.PickedToSector,
@@ -235,46 +255,23 @@ namespace FlowFieldNavigation
             NativeArray<OverlappingDirection> sectorOverlappingDirections = new NativeArray<OverlappingDirection>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent);
             int2 islandSeed2d = FlowFieldUtilities.PosTo2D(anySourcePoint, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
             int islandSeed1d = FlowFieldUtilities.To1D(islandSeed2d, FlowFieldUtilities.FieldColAmount);
-            if (PathfindingInternalDataList.Count == pathIndex)
-            {
-                PathfindingInternalDataList.Add(internalData);
-                PathSectorStateTableList.Add(preallocations.SectorStateTable);
-                PathPortalTraversalDataList.Add(portalTraversalData);
-                PathDestinationDataList.Add(destinationData);
-                PathRoutineDataList.Add(new PathRoutineData());
-                PathSectorBitArrays.Add(preallocations.SectorBitArray);
-                PathSubscriberCounts.Add(request.SourceCount);
-                PathFlockIndicies.Add(request.FlockIndex);
-                SectorOverlappingDirectionTableList.Add(sectorOverlappingDirections);
-                SectorToFlowStartTables.Add(new NativeArray<int>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent));
-                PathRanges.Add(request.Range);
-                PathDesiredRanges.Add(request.DesiredRange);
-                PathGoalNeighbourIndexToGoalIndexMaps.Add(new NativeHashMap<int, int>(0, Allocator.Persistent));
-                PathGoalTraversalDataFieldIndexLists.Add(new NativeList<int>(Allocator.Persistent));
-                PathAlreadyConsideredSectorIndexMaps.Add(new NativeHashSet<int>(0, Allocator.Persistent));
-                PathIslandSeedsAsFieldIndicies.Add(islandSeed1d);
-            }
-            else
-            {
-                PathfindingInternalDataList[pathIndex] = internalData;
-                PathSectorStateTableList[pathIndex] = preallocations.SectorStateTable;
-                PathPortalTraversalDataList[pathIndex] = portalTraversalData;
-                PathDestinationDataList[pathIndex] = destinationData;
-                PathRoutineDataList[pathIndex] = new PathRoutineData();
-                PathSectorBitArrays[pathIndex] = preallocations.SectorBitArray;
-                PathSubscriberCounts[pathIndex] = request.SourceCount;
-                PathFlockIndicies[pathIndex] = request.FlockIndex;
-                SectorOverlappingDirectionTableList[pathIndex] = sectorOverlappingDirections;
-                SectorToFlowStartTables[pathIndex] = new NativeArray<int>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent);
-                PathRanges[pathIndex] = request.Range;
-                PathDesiredRanges[pathIndex] = request.DesiredRange;
-                PathGoalNeighbourIndexToGoalIndexMaps[pathIndex] = new NativeHashMap<int, int>(0, Allocator.Persistent);
-                PathGoalTraversalDataFieldIndexLists[pathIndex] = new NativeList<int>(Allocator.Persistent);
-                PathAlreadyConsideredSectorIndexMaps[pathIndex] = new NativeHashSet<int>(0, Allocator.Persistent);
-                PathIslandSeedsAsFieldIndicies[pathIndex] = islandSeed1d;
-            }
 
-            return pathIndex;
+            PathfindingInternalDataList[request.PathIndex] = internalData;
+            PathSectorStateTableList[request.PathIndex] = preallocations.SectorStateTable;
+            PathPortalTraversalDataList[request.PathIndex] = portalTraversalData;
+            PathDestinationDataList[request.PathIndex] = destinationData;
+            PathRoutineDataList[request.PathIndex] = new PathRoutineData();
+            PathSectorBitArrays[request.PathIndex] = preallocations.SectorBitArray;
+            PathSubscriberCounts[request.PathIndex] = request.SourceCount;
+            PathFlockIndicies[request.PathIndex] = request.FlockIndex;
+            SectorOverlappingDirectionTableList[request.PathIndex] = sectorOverlappingDirections;
+            SectorToFlowStartTables[request.PathIndex] = new NativeArray<int>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent);
+            PathRanges[request.PathIndex] = request.Range;
+            PathDesiredRanges[request.PathIndex] = request.DesiredRange;
+            PathGoalNeighbourIndexToGoalIndexMaps[request.PathIndex] = new NativeHashMap<int, int>(0, Allocator.Persistent);
+            PathGoalTraversalDataFieldIndexLists[request.PathIndex] = new NativeList<int>(Allocator.Persistent);
+            PathAlreadyConsideredSectorIndexMaps[request.PathIndex] = new NativeHashSet<int>(0, Allocator.Persistent);
+            PathIslandSeedsAsFieldIndicies[request.PathIndex] = islandSeed1d;
         }
     }
 

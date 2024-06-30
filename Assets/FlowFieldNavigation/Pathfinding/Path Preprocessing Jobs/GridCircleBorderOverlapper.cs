@@ -30,7 +30,6 @@ namespace FlowFieldNavigation
         const byte STAGE_TOPLEFT = 4;
 
         int _sectorColAmount;
-        int _sectorMatrixColAmount;
         float _tileSize;
         float2 _fieldGridStartPosition;
 
@@ -40,10 +39,9 @@ namespace FlowFieldNavigation
         int2 _previousIndex;
         int2 _currentIndex;
         byte _lookupStage;
-        internal GridCircleBorderOverlapper(float2 circleCenter, float circleRadius, int sectorColAmount, int sectorMatrixColAmount, float tileSize, float2 fieldGridStartPos)
+        internal GridCircleBorderOverlapper(float2 circleCenter, float circleRadius, int sectorColAmount, float tileSize, float2 fieldGridStartPos)
         {
             _sectorColAmount = sectorColAmount;
-            _sectorMatrixColAmount = sectorMatrixColAmount;
             _tileSize = tileSize;
             _fieldGridStartPosition = fieldGridStartPos;
             _circleCenter = circleCenter;

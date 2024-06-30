@@ -20,14 +20,12 @@ namespace FlowFieldNavigation
         }
         internal List<Mesh> GetDebugMesh()
         {
-            if (true) { Create(); }
+            if (!_isCreated) { Create(); }
             return _debugMeshes;
         }
 
         void Create()
         {
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
             _isCreated = true;
             int fieldColAmount = FlowFieldUtilities.FieldColAmount;
             int fieldRowAmount = FlowFieldUtilities.FieldRowAmount;
@@ -66,8 +64,6 @@ namespace FlowFieldNavigation
                     }
                 }
             }
-            sw.Stop();
-            UnityEngine.Debug.Log(sw.Elapsed.TotalMilliseconds);
         }
 
         Mesh CreateMesh(NativeArray<float3> verts, NativeArray<int> trigs)
