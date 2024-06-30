@@ -30,7 +30,14 @@ namespace FlowFieldNavigation
             Color color = Color.blue;
             color.a = 0.3f;
             Gizmos.color = color;
-            GridCircleBorderOverlapper overlapper = new GridCircleBorderOverlapper(center, radius);
+            GridCircleBorderOverlapper overlapper = 
+                new GridCircleBorderOverlapper(
+                    center, 
+                    radius,
+                    FlowFieldUtilities.SectorColAmount,
+                    FlowFieldUtilities.SectorMatrixColAmount,
+                    FlowFieldUtilities.TileSize,
+                    FlowFieldUtilities.FieldGridStartPosition);
             overlapper.Start();
             while(overlapper.TryGetCurrent(out int2 currentIndex))
             {

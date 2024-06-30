@@ -28,14 +28,24 @@ namespace FlowFieldNavigation
         const byte STAGE_BOTRIGHT = 2;
         const byte STAGE_BOTLEFT = 3;
         const byte STAGE_TOPLEFT = 4;
+
+        int _sectorColAmount;
+        int _sectorMatrixColAmount;
+        float _tileSize;
+        float2 _fieldGridStartPosition;
+
         float2 _circleCenter;
         float _circleRadius;
         int2 _startIndex;
         int2 _previousIndex;
         int2 _currentIndex;
         byte _lookupStage;
-        internal GridCircleBorderOverlapper(float2 circleCenter, float circleRadius)
+        internal GridCircleBorderOverlapper(float2 circleCenter, float circleRadius, int sectorColAmount, int sectorMatrixColAmount, float tileSize, float2 fieldGridStartPos)
         {
+            _sectorColAmount = sectorColAmount;
+            _sectorMatrixColAmount = sectorMatrixColAmount;
+            _tileSize = tileSize;
+            _fieldGridStartPosition = fieldGridStartPos;
             _circleCenter = circleCenter;
             _circleRadius = circleRadius;
             _currentIndex = 0;
@@ -46,7 +56,7 @@ namespace FlowFieldNavigation
         internal void Start()
         {
             float2 topPosition = _circleCenter + new float2(0, _circleRadius);
-            int2 topIndex = FlowFieldUtilities.PosTo2D(topPosition, FlowFieldUtilities.TileSize * FlowFieldUtilities.SectorColAmount, FlowFieldUtilities.FieldGridStartPosition);
+            int2 topIndex = FlowFieldUtilities.PosTo2D(topPosition, _tileSize * _sectorColAmount, _fieldGridStartPosition);
             _currentIndex = topIndex;
             _startIndex = topIndex;
             _lookupStage = STAGE_TOPRIGHT;
@@ -127,8 +137,8 @@ namespace FlowFieldNavigation
         }
         bool IsBorderSector(int2 sector2d)
         {
-            float sectorSize = FlowFieldUtilities.SectorColAmount * FlowFieldUtilities.TileSize;
-            float2 sectorMin = sector2d * math.float2(FlowFieldUtilities.TileSize) * FlowFieldUtilities.SectorColAmount + FlowFieldUtilities.FieldGridStartPosition;
+            float sectorSize = _sectorColAmount * _tileSize;
+            float2 sectorMin = sector2d * math.float2(_tileSize) * _sectorColAmount + _fieldGridStartPosition;
             float2 sectorMax = sectorMin + sectorSize;
             bool2 goalSmallerThanSectorMaxPos = _circleCenter <= sectorMax;
             bool2 goalBiggerThanSectorMinPos = _circleCenter >= sectorMin;
