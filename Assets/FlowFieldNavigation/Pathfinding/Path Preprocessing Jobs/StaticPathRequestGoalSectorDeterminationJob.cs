@@ -5,6 +5,7 @@ using Unity.Mathematics;
 
 namespace FlowFieldNavigation
 {
+    [BurstCompile]
     internal struct StaticPathRequestGoalSectorDeterminationJob : IJob
     {
         internal int SectorColAmount;
@@ -16,8 +17,8 @@ namespace FlowFieldNavigation
         [ReadOnly] internal NativeList<FinalPathRequest> FinalPathRequests;
         internal NativeParallelMultiHashMap<int, int> PathIndexToGoalSectors;
         internal NativeList<float> StaticGoalSectorBfsGrids;
-        internal NativeList<int> StaticGoalSectorOffsets;
         internal NativeList<int> StaticGoalSectors;
+        internal NativeList<int> StaticGoalSectorIndexToFinalPathRequestIndex;
         public void Execute()
         {
             NativeArray<FinalPathRequest> finalPathRequestsAsArray = FinalPathRequests.AsArray();
@@ -42,19 +43,13 @@ namespace FlowFieldNavigation
                         int currentSector1d = FlowFieldUtilities.To1D(currentSector, SectorMatrixColAmount);
                         PathIndexToGoalSectors.Add(pathIndex, currentSector1d);
                         StaticGoalSectors.Add(currentSector1d);
+                        StaticGoalSectorIndexToFinalPathRequestIndex.Add(i);
                         StaticGoalSectorBfsGrids.Length += SectorTileAmount;
                         goalSectorCount++;
                     }
                 }
                 request.GoalSectorCount = goalSectorCount;
                 finalPathRequestsAsArray[i] = request;
-
-                StaticGoalSectorOffsets.Length += goalSectorCount;
-                for(int j = 0; j < request.GoalSectorCount; j++)
-                {
-                    int staticGoalSectorIndex = j + request.GoalSectorStartIndex;
-                    StaticGoalSectorOffsets[staticGoalSectorIndex] = request.Offset;
-                }
             }
         }
     }
