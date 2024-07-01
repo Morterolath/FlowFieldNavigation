@@ -454,7 +454,7 @@ PrefabInstance:
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
       propertyPath: RowAmount
-      value: 500
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
@@ -464,7 +464,7 @@ PrefabInstance:
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
       propertyPath: ColumnAmount
-      value: 500
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 1284591848226207637, guid: f04ffee1160a8494782072c6bf5424ca,
         type: 3}
@@ -1080,10 +1080,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac6ee70bed3cb45468183ef0b5f49189, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  center:
-    x: 0
-    y: 0
-  radius: 100
 --- !u!1 &1676759290
 GameObject:
   m_ObjectHideFlags: 0
@@ -1377,6 +1373,11 @@ PrefabInstance:
         type: 3}
       propertyPath: _debugAvoidanceDirections
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5797102840990353135, guid: 36909ba34dc9cc34aa509e8036cbe263,
+        type: 3}
+      propertyPath: _debugGoalNeighborPortals
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5797102840990353135, guid: 36909ba34dc9cc34aa509e8036cbe263,
         type: 3}

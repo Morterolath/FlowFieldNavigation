@@ -105,6 +105,22 @@ namespace FlowFieldNavigation
                 return -1;
             }
         }
+        internal UnsafeListReadOnly<PortalNode> GetPortalNodesAsUnsafeListReadonly()
+        {
+            return FlowFieldUtilitiesUnsafe.ToUnsafeListRedonly<PortalNode>(PortalNodes);
+        }
+        internal UnsafeListReadOnly<SectorNode> GetSectorNodesAsUnsafeListReadonly()
+        {
+            return FlowFieldUtilitiesUnsafe.ToUnsafeListRedonly<SectorNode>(SectorNodes);
+        }
+        internal UnsafeListReadOnly<WindowNode> GetWindowNodesAsUnsafeListReadonly()
+        {
+            return FlowFieldUtilitiesUnsafe.ToUnsafeListRedonly<WindowNode>(WindowNodes);
+        }
+        internal UnsafeListReadOnly<int> GetSecToWinPtrsAsUnsafeListReadonly()
+        {
+            return FlowFieldUtilitiesUnsafe.ToUnsafeListRedonly<int>(SecToWinPtrs);
+        }
 
         internal FieldGraphConfigurationJob GetConfigJob(NativeArray<byte> costs)
         {

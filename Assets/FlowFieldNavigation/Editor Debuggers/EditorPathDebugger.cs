@@ -275,50 +275,25 @@ namespace FlowFieldNavigation
             }
 
         }
-        internal void DebugPortalTraversalMarks(FlowFieldAgent agent, NativeArray<float> portalHeights)
-        {/*
+        internal void DebugGoalNeighborPortals(FlowFieldAgent agent, NativeArray<float> portalHeights)
+        {
             if (_pathContainer == null) { return; }
             if (_pathContainer.PathfindingInternalDataList.Count == 0) { return; }
             int pathIndex = agent.GetPathIndex();
             if (pathIndex == -1) { return; }
 
-
-            PathPortalTraversalData portalTraversalData = _pathContainer.PathPortalTraversalDataList[pathIndex];
-            PathDestinationData destinationData = _navigationManager.PathDataContainer.PathDestinationDataList[pathIndex];
-            float tileSize = FlowFieldUtilities.TileSize;
-            FieldGraph fg = _fieldProducer.GetFieldGraphWithOffset(destinationData.Offset);
-            NativeArray<PortalNode> portalNodes = fg.PortalNodes;
-            NativeArray<PortalTraversalDataRecord> porTravDataRecod = portalTraversalData.PortalDataRecords.AsArray();
-
-            for (int i = 0; i < porTravDataRecod.Length; i++)
+            int offset = _pathContainer.PathDestinationDataList[pathIndex].Offset;
+            UnsafeList<GoalNeighborPortal> goalNeighbors = _pathContainer.PathGoalNeighborPortals[pathIndex];
+            NativeArray<PortalNode> portalNodes = _navigationManager.FieldDataContainer.GetFieldGraphWithOffset(offset).PortalNodes;
+            Gizmos.color = Color.cyan;
+            for (int i = 0; i < goalNeighbors.Length; i++)
             {
-                PortalTraversalDataRecord record = porTravDataRecod[i];
-                PortalNode node = portalNodes[record.PortalIndex];
-                Vector3 portalPos = node.GetPosition(tileSize, FlowFieldUtilities.FieldGridStartPosition);
-                portalPos.y = portalHeights[record.PortalIndex];
-                Vector3 labelPos = portalPos + new Vector3(0, 3, 0);
-                if ((record.Mark & PortalTraversalMark.AStarTraversed) == PortalTraversalMark.AStarTraversed)
-                {
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawSphere(portalPos, 0.25f);
-                }
-                if ((record.Mark & PortalTraversalMark.AStarExtracted) == PortalTraversalMark.AStarExtracted)
-                {
-                    Gizmos.color = Color.white;
-                    Gizmos.DrawSphere(portalPos + new Vector3(-0.35f, 0, 0), 0.25f);
-                }
-                if ((record.Mark & PortalTraversalMark.AStarPicked) == PortalTraversalMark.AStarPicked)
-                {
-                    Gizmos.color = Color.black;
-                    Gizmos.DrawSphere(portalPos + new Vector3(0.35f, 0, 0), 0.25f);
-                }
-                if ((record.Mark & PortalTraversalMark.GoalNeighbour) == PortalTraversalMark.GoalNeighbour)
-                {
-                    Gizmos.color = Color.cyan;
-                    Gizmos.DrawSphere(portalPos + new Vector3(0,0,0.35f), 0.25f);
-                }
-                Handles.Label(labelPos, record.PortalIndex + " : " + record.DistanceFromTarget.ToString());
-            }*/
+                GoalNeighborPortal portal = goalNeighbors[i];
+                Vector3 pos = portalNodes[portal.PortalIndex].GetPosition(FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
+                pos.y = portalHeights[portal.PortalIndex];
+                Gizmos.DrawSphere(pos, 1f);
+                Handles.Label(pos + Vector3.one, portal.Distance.ToString());
+            }
         }
         internal void DebugPortalSequence(FlowFieldAgent agent, NativeArray<float> portalHeights)
         {

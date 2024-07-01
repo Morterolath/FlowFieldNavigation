@@ -32,6 +32,7 @@ namespace FlowFieldNavigation
         }
         void RunFM(int sectorIndex, float2 goal, float goalRangeSq, UnsafeListReadOnly<byte> costs, NativeSlice<float> targetSectorCostsGrid)
         {
+            int2 goal2d = FlowFieldUtilities.PosTo2D(goal, TileSize, FieldGridStartPos);
             int sectorTileAmount = SectorTileAmount;
             int sectorColAmount = SectorColAmount;
             NativeBitArray isBlocked = new NativeBitArray(sectorTileAmount, Allocator.Temp);
@@ -55,19 +56,18 @@ namespace FlowFieldNavigation
                 int localIndex = i;
                 int2 general2d = FlowFieldUtilities.GetGeneral2d(i, sectorIndex, SectorMatrixColAmount, SectorColAmount);
                 float2 indexPos = FlowFieldUtilities.IndexToPos(general2d, TileSize, FieldGridStartPos);
-                if(math.distancesq(indexPos, goal) > goalRangeSq) { continue; }
+                if(math.distancesq(indexPos, goal) > goalRangeSq && !goal2d.Equals(general2d)) { continue; }
                 targetSectorCostsGrid[localIndex] = 0f;
                 isBlocked.Set(localIndex, true);
             }
 
             //Enqueue start index neighbour
-
             for (int i = 0; i < targetSectorCostsGrid.Length; i++)
             {
                 int localIndex = i;
                 int2 general2d = FlowFieldUtilities.GetGeneral2d(i, sectorIndex, SectorMatrixColAmount, SectorColAmount);
                 float2 indexPos = FlowFieldUtilities.IndexToPos(general2d, TileSize, FieldGridStartPos);
-                if (math.distancesq(indexPos, goal) > goalRangeSq) { continue; }
+                if (math.distancesq(indexPos, goal) > goalRangeSq && !goal2d.Equals(general2d)) { continue; }
                 SetNeighbourData(localIndex);
                 EnqueueNeighbours();
             }

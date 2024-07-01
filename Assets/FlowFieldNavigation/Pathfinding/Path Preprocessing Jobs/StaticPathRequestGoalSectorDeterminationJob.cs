@@ -14,7 +14,7 @@ namespace FlowFieldNavigation
         internal int SectorTileAmount;
         internal float TileSize;
         internal float2 FieldGridStartPos;
-        [ReadOnly] internal NativeList<FinalPathRequest> FinalPathRequests;
+        internal NativeList<FinalPathRequest> FinalPathRequests;
         internal NativeParallelMultiHashMap<int, int> PathIndexToGoalSectors;
         internal NativeList<float> StaticGoalSectorBfsGrids;
         internal NativeList<int> StaticGoalSectors;
@@ -26,7 +26,7 @@ namespace FlowFieldNavigation
             {
                 FinalPathRequest request = finalPathRequestsAsArray[i];
                 if (!request.IsValid()) { continue; }
-                if (request.Type != DestinationType.DynamicDestination) { continue; }
+                if (request.Type != DestinationType.StaticDestination) { continue; }
                 request.GoalSectorStartIndex = StaticGoalSectors.Length;
                 int pathIndex = request.PathIndex;
                 float2 goal = request.Destination;
@@ -38,6 +38,7 @@ namespace FlowFieldNavigation
                 rangeBoderOverlapper.Start();
                 while(rangeBoderOverlapper.TryGetCurrent(out int2 currentSector))
                 {
+                    rangeBoderOverlapper.MoveNext();
                     if(!FlowFieldUtilities.SectorOutOfBounds(currentSector, SectorMatrixColAmount, SectorMatrixRowAmount))
                     {
                         int currentSector1d = FlowFieldUtilities.To1D(currentSector, SectorMatrixColAmount);

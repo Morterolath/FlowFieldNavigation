@@ -108,9 +108,14 @@ namespace FlowFieldNavigation
             _agentPositions.Dispose();
             _requestedPaths.Dispose();
         }
-        internal void ShcedulePathRequestEvalutaion(NativeArray<PathRequest> inputPathRequests,
+        internal void ShcedulePathRequestEvalutaion(
+            NativeArray<PathRequest> inputPathRequests,
             NativeArray<IslandFieldProcessor> islandFieldProcessors,
             NativeArray<SectorBitArray>.ReadOnly editedSectorBitArray,
+            NativeArray<UnsafeListReadOnly<SectorNode>> SectorNodesPerOffset,
+            NativeArray<UnsafeListReadOnly<int>> SecToWinPtrsPerOffset,
+            NativeArray<UnsafeListReadOnly<WindowNode>> WindowNodesPerOffset,
+            NativeArray<UnsafeListReadOnly<PortalNode>> PortalNodesPerOffset,
             JobHandle systemDependency)
         {
             //RESET CONTAINERS
@@ -158,6 +163,7 @@ namespace FlowFieldNavigation
             NativeArray<int> pathIslandSeedsAsFieldIndex = _pathContainer.PathIslandSeedsAsFieldIndicies.AsArray();
             NativeList<int> unusedPathIndexList = _pathContainer.UnusedPathIndexList;
             NativeParallelMultiHashMap<int, int> pathIndexToGoalSectorsMap = _pathContainer.PathIndexToGoalSectorsMap;
+            NativeList<UnsafeList<GoalNeighborPortal>> pathGoalNeighborPortals = _pathContainer.PathGoalNeighborPortals;
 
             //Copy agent positions from transforms
             _agentPositions.Length = agentTransforms.length;
@@ -494,10 +500,11 @@ namespace FlowFieldNavigation
                 FinalPathRequests = _finalPathRequests,
                 NewPathListLength = _newPathlistLength,
                 UnusedPathIndexList = unusedPathIndexList,
+                PathGoalNeighborPortals = pathGoalNeighborPortals,
             };
             JobHandle pathIndexDetHandle = pathIndexDetermination.Schedule(sourceSubmitHandle);
             if (FlowFieldUtilities.DebugMode) { pathIndexDetHandle.Complete(); }
-
+            
             StaticPathRequestGoalSectorDeterminationJob staticGoalSectorDetermination = new StaticPathRequestGoalSectorDeterminationJob()
             {
                 SectorColAmount = FlowFieldUtilities.SectorColAmount,
@@ -514,7 +521,7 @@ namespace FlowFieldNavigation
             };
             JobHandle staticGoalSectorDeterminationHandle = staticGoalSectorDetermination.Schedule(pathIndexDetHandle);
             if (FlowFieldUtilities.DebugMode) { staticGoalSectorDeterminationHandle.Complete(); }
-
+            
             StaticPathGoalSectorFMJob goalSectorFmJob = new StaticPathGoalSectorFMJob()
             {
                 SectorColAmount = FlowFieldUtilities.SectorColAmount,
@@ -531,10 +538,23 @@ namespace FlowFieldNavigation
             JobHandle goalSectorFmHandle = goalSectorFmJob.Schedule(StaticPathGoalSectorBfsGrids.Length, FlowFieldUtilities.SectorTileAmount, staticGoalSectorDeterminationHandle);
             if (FlowFieldUtilities.DebugMode) { staticGoalSectorDeterminationHandle.Complete(); }
 
-            //run goal sector query for ranged paths
-            //  add sectors to multihashmap k=path index v=sector index
-            //  extract goal portals from sectors using bfs, add those portals to another multihashmap
-            _pathfindingTaskOrganizationHandle.Add(goalSectorFmHandle);
+            StaticPathGoalPortalDeterminationJob staticGoalPortalJob = new StaticPathGoalPortalDeterminationJob()
+            {
+                SectorColAmount = FlowFieldUtilities.SectorColAmount,
+                SectorMatrixColAmount = FlowFieldUtilities.SectorMatrixColAmount,
+                SectorTileAmount = FlowFieldUtilities.SectorTileAmount,
+                StaticGoalSectors = StaticPathGoalSectors,
+                StaticGoalSectorBfsGrid = StaticPathGoalSectorBfsGrids,
+                FinalPathRequests = _finalPathRequests,
+                PathGoalNeighborPortals = pathGoalNeighborPortals,
+                SecToWinPtrsPerOffset = SecToWinPtrsPerOffset,
+                SectorNodesPerOffset = SectorNodesPerOffset,
+                PortalNodesPerOffset = PortalNodesPerOffset,
+                WindowNodesPerOffset = WindowNodesPerOffset,
+            };
+            JobHandle staticGoalPortalHandle = staticGoalPortalJob.Schedule(goalSectorFmHandle);
+            if (FlowFieldUtilities.DebugMode) { staticGoalPortalHandle.Complete(); }
+            _pathfindingTaskOrganizationHandle.Add(staticGoalSectorDeterminationHandle);
         }
         void CompletePathEvaluation()
         {

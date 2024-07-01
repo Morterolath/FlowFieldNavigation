@@ -37,6 +37,22 @@ namespace FlowFieldNavigation
             _fieldGraphProducer.ProduceFieldGraphs(_costFieldProducer.GetAllCostFields());
             baseCostField.Dispose();
         }
+        internal NativeArray<UnsafeListReadOnly<PortalNode>> GetAllPortalNodeArrays(Allocator allocator)
+        {
+            return _fieldGraphProducer.GetAllPortalNodeArrays(allocator);
+        }
+        internal NativeArray<UnsafeListReadOnly<SectorNode>> GetAllSectorNodeArrays(Allocator allocator)
+        {
+            return _fieldGraphProducer.GetAllSectorNodeArrays(allocator);
+        }
+        internal NativeArray<UnsafeListReadOnly<WindowNode>> GetAllWindowNodeArrays(Allocator allocator)
+        {
+            return _fieldGraphProducer.GetAllWindowNodeArrays(allocator);
+        }
+        internal NativeArray<UnsafeListReadOnly<int>> GetAllSecToWinPtrArrays(Allocator allocator)
+        {
+            return _fieldGraphProducer.GetAllSecToWinPtrArrays(allocator);
+        }
         internal FieldGraph GetFieldGraphWithOffset(int offset)
         {
             return _fieldGraphProducer.GetFieldGraphWithOffset(offset);

@@ -15,6 +15,11 @@ namespace FlowFieldNavigation
         PathfindingManager _pathfindingManager;
         MovementManager _movementManager;
         CostFieldEditManager _fieldEditManager;
+        
+        NativeArray<UnsafeListReadOnly<SectorNode>> SectorNodesPerOffset;
+        NativeArray<UnsafeListReadOnly<int>> SecToWinPtrsPerOffset;
+        NativeArray<UnsafeListReadOnly<WindowNode>> WindowNodesPerOffset;
+        NativeArray<UnsafeListReadOnly<PortalNode>> PortalNodesPerOffset;
 
         float _timePassedSinceLastUpdate;
         const float _updateFrequency = 0.02f;
@@ -27,6 +32,11 @@ namespace FlowFieldNavigation
             _pathfindingManager = navigationManager.PathfindingManager;
             _movementManager = navigationManager.MovementManager;
             _fieldEditManager = navigationManager.FieldEditManager;
+
+            SectorNodesPerOffset = navigationManager.FieldDataContainer.GetAllSectorNodeArrays(Allocator.Persistent);
+            SecToWinPtrsPerOffset = navigationManager.FieldDataContainer.GetAllSecToWinPtrArrays(Allocator.Persistent);
+            WindowNodesPerOffset = navigationManager.FieldDataContainer.GetAllWindowNodeArrays(Allocator.Persistent);
+            PortalNodesPerOffset = navigationManager.FieldDataContainer.GetAllPortalNodeArrays(Allocator.Persistent);
         }
         internal void IntermediateUpdate()
         {
@@ -77,7 +87,15 @@ namespace FlowFieldNavigation
 
             NativeArray<IslandFieldProcessor> islandFieldProcessors = _navigationManager.FieldDataContainer.GetAllIslandFieldProcessors(Allocator.Persistent);
             _fieldEditManager.Schedule(costEditRequests.AsArray().AsReadOnly());
-            _pathfindingManager.ShcedulePathRequestEvalutaion(pathRequests.AsArray(), islandFieldProcessors, _fieldEditManager.EditedSectorBitArraysForEachField, _fieldEditManager.GetCurrentIslandFieldReconfigHandle());
+            _pathfindingManager.ShcedulePathRequestEvalutaion(
+                pathRequests.AsArray(), 
+                islandFieldProcessors, 
+                _fieldEditManager.EditedSectorBitArraysForEachField,
+                SectorNodesPerOffset,
+                SecToWinPtrsPerOffset,
+                WindowNodesPerOffset,
+                PortalNodesPerOffset,
+                _fieldEditManager.GetCurrentIslandFieldReconfigHandle());
             _movementManager.ScheduleRoutine(_updateFrequency, _fieldEditManager.GetCurrentCostFieldEditHandle());
 
             pathRequests.Clear();

@@ -38,6 +38,7 @@ namespace FlowFieldNavigation
         internal NativeParallelMultiHashMap<int, int> PathIndexToUpdateSeedsMap;
         internal NativeList<int> UnusedPathIndexList;
         internal NativeParallelMultiHashMap<int, int> PathIndexToGoalSectorsMap;
+        internal NativeList<UnsafeList<GoalNeighborPortal>> PathGoalNeighborPortals;
 
         FieldDataContainer _fieldProducer;
         PathPreallocator _preallocator;
@@ -75,6 +76,7 @@ namespace FlowFieldNavigation
             PathIslandSeedsAsFieldIndicies = new NativeList<int>(Allocator.Persistent);
             PathIndexToUpdateSeedsMap = new NativeParallelMultiHashMap<int, int>(0, Allocator.Persistent);
             PathIndexToGoalSectorsMap = new NativeParallelMultiHashMap<int, int>(0, Allocator.Persistent);
+            PathGoalNeighborPortals = new NativeList<UnsafeList<GoalNeighborPortal>>(Allocator.Persistent);
         }
         internal void DisposeAll()
         {
@@ -126,6 +128,8 @@ namespace FlowFieldNavigation
                     PathGoalTraversalDataFieldIndexLists[i].Dispose();
                     ExposedPathStateList[i] = PathState.Removed;
                     PathAlreadyConsideredSectorIndexMaps[i].Dispose();
+                    PathGoalNeighborPortals[i].Dispose();
+
                     UnusedPathIndexList.Add(i);
                     PreallocationPack preallocations = new PreallocationPack()
                     {

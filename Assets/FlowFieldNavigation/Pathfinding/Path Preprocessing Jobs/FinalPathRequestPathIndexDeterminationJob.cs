@@ -2,6 +2,7 @@
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Mathematics;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace FlowFieldNavigation
 {
@@ -12,6 +13,7 @@ namespace FlowFieldNavigation
         internal NativeList<int> UnusedPathIndexList;
         internal NativeList<FinalPathRequest> FinalPathRequests;
         internal NativeReference<int> NewPathListLength;
+        internal NativeList<UnsafeList<GoalNeighborPortal>> PathGoalNeighborPortals;
         public void Execute()
         {
             NativeArray<FinalPathRequest> finalPathRequestsAsArray = FinalPathRequests.AsArray();
@@ -32,6 +34,7 @@ namespace FlowFieldNavigation
                 UnusedPathIndexList.RemoveAtSwapBack(UnusedPathIndexList.Length - 1);
             }
             NewPathListLength.Value = CurrentPathListLength;
+            PathGoalNeighborPortals.Length = CurrentPathListLength;
         }
     }
 }

@@ -37,6 +37,44 @@ namespace FlowFieldNavigation
             JobHandle.CompleteAll(combinedHandles.AsArray());
             combinedHandles.Dispose();
         }
+        internal NativeArray<UnsafeListReadOnly<PortalNode>> GetAllPortalNodeArrays(Allocator allocator)
+        {
+            NativeArray<UnsafeListReadOnly<PortalNode>> portalNodes = new NativeArray<UnsafeListReadOnly<PortalNode>>(_fieldGraphs.Length, allocator);
+            for(int i = 0; i < _fieldGraphs.Length; i++)
+            {
+                portalNodes[i] = _fieldGraphs[i].GetPortalNodesAsUnsafeListReadonly();
+            }
+            return portalNodes;
+        }
+        internal NativeArray<UnsafeListReadOnly<SectorNode>> GetAllSectorNodeArrays(Allocator allocator)
+        {
+            NativeArray<UnsafeListReadOnly<SectorNode>> sectorNodes = new NativeArray<UnsafeListReadOnly<SectorNode>>(_fieldGraphs.Length, allocator);
+            for (int i = 0; i < _fieldGraphs.Length; i++)
+            {
+                sectorNodes[i] = _fieldGraphs[i].GetSectorNodesAsUnsafeListReadonly();
+            }
+            return sectorNodes;
+
+        }
+        internal NativeArray<UnsafeListReadOnly<WindowNode>> GetAllWindowNodeArrays(Allocator allocator)
+        {
+            NativeArray<UnsafeListReadOnly<WindowNode>> windowNodes = new NativeArray<UnsafeListReadOnly<WindowNode>>(_fieldGraphs.Length, allocator);
+            for (int i = 0; i < _fieldGraphs.Length; i++)
+            {
+                windowNodes[i] = _fieldGraphs[i].GetWindowNodesAsUnsafeListReadonly();
+            }
+            return windowNodes;
+
+        }
+        internal NativeArray<UnsafeListReadOnly<int>> GetAllSecToWinPtrArrays(Allocator allocator)
+        {
+            NativeArray<UnsafeListReadOnly<int>> secToWinPtrs = new NativeArray<UnsafeListReadOnly<int>>(_fieldGraphs.Length, allocator);
+            for (int i = 0; i < _fieldGraphs.Length; i++)
+            {
+                secToWinPtrs[i] = _fieldGraphs[i].GetSecToWinPtrsAsUnsafeListReadonly();
+            }
+            return secToWinPtrs;
+        }
         internal FieldGraph GetFieldGraphWithOffset(int offset)
         {
             return _fieldGraphs[offset];
