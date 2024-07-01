@@ -391,7 +391,7 @@ namespace FlowFieldNavigation
             }
 
             Gizmos.color = Color.cyan;
-            NativeParallelMultiHashMap<int, int>.Enumerator sectors = _pathContainer.PathIndexToGoalSectorsMap.GetValuesForKey(pathIndex);
+            NativeParallelMultiHashMap<int, int>.Enumerator sectors = _pathContainer.PathToPossibleGoalSectorsMap.GetValuesForKey(pathIndex);
             while (sectors.MoveNext())
             {
                 int sector = sectors.Current;

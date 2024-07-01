@@ -10,6 +10,7 @@ namespace FlowFieldNavigation
     internal struct PortalTraversalProc
     {
         internal static void Run(
+            int pathIndex,
             int2 goalIndex,
             int islandSeed,
             int fieldColAmount,
@@ -25,7 +26,6 @@ namespace FlowFieldNavigation
 
 
             NativeList<PickedPortalDataRecord> pickedPortalDataRecord,
-            NativeArray<byte> costs,
             NativeList<IntegrationTile> integrationField,
             NativeList<ActivePortal> portalSequence,
             NativeList<Slice> portalSequenceSlices,
@@ -40,15 +40,15 @@ namespace FlowFieldNavigation
             NativeArray<int> secToWinPtrs,
             NativeArray<PortalNode> portalNodes,
             NativeArray<UnsafeList<int>> islandFields,
-            NativeHashSet<int> possibleGoalSectors,
-            NativeReference<SectorsWihinLOSArgument> sectorWithinLosRange
+            NativeReference<SectorsWihinLOSArgument> sectorWithinLosRange,
+            UnsafeList<GoalNeighborPortal> goalNeighborPortals,
+            NativeParallelMultiHashMap<int, int> pathToGoalSectorMap
             )
         {
             sourcePortalIndexList.Clear();
             SubmitPickedMarks();
             SetSourcePortalIndicies();
             NativeList<int> indiciesToClear = new NativeList<int>(Allocator.Temp);
-            NativeArray<GoalNeighborPortal> goalNeighborPortals = GetGoalPortalIndicies();
             NativeHeap<int> traversalHeap = new NativeHeap<int>(0, Allocator.Temp);
             for (int i = 0; i < sourcePortalIndexList.Length; i++)
             {
@@ -165,13 +165,18 @@ namespace FlowFieldNavigation
             }
             void AddGoalSector()
             {
-                int targetSector = FlowFieldUtilities.GetSector1D(goalIndex, sectorColAmount, sectorMatrixColAmount);
-                if ((sectorStateTable[targetSector] & PathSectorState.Included) != PathSectorState.Included)
+                NativeParallelMultiHashMap<int, int>.Enumerator goalSectors = pathToGoalSectorMap.GetValuesForKey(pathIndex);
+                while (goalSectors.MoveNext())
                 {
-                    pickedSectorList.Add(targetSector);
-                    sectorStateTable[targetSector] |= PathSectorState.Included;
+                    int sector = goalSectors.Current;
+                    PathSectorState mark = PathSectorState.PossibleGoal;
+                    if ((sectorStateTable[sector] & PathSectorState.Included) != PathSectorState.Included)
+                    {
+                        pickedSectorList.Add(sector);
+                        mark |= PathSectorState.Included;
+                    }
+                    sectorStateTable[sector] |= mark;
                 }
-                possibleGoalSectors.Add(targetSector);
             }
             void ClearPortalTraversalDataArray()
             {
@@ -284,7 +289,7 @@ namespace FlowFieldNavigation
                 int sliceLength = sliceEnd - sliceStart;
                 portalSequenceSlices.Add(new Slice(sliceStart, sliceLength));
             }
-            void AddGoalNeihborPortalsToTheHeap(NativeArray<GoalNeighborPortal> goalNeighborPortals, NativeHeap<int> traversalHeap, int2 goalIndex)
+            void AddGoalNeihborPortalsToTheHeap(UnsafeList<GoalNeighborPortal> goalNeighborPortals, NativeHeap<int> traversalHeap, int2 goalIndex)
             {
                 for(int i = 0; i < goalNeighborPortals.Length; i++)
                 {
@@ -300,157 +305,6 @@ namespace FlowFieldNavigation
                     traversalHeap.Add(goalNeighbor.PortalIndex, goalNeighborData.FCost);
                     indiciesToClear.Add(goalNeighbor.PortalIndex);
                 }
-            }
-            NativeArray<GoalNeighborPortal> GetGoalPortalIndicies()
-            {
-                NativeList<GoalNeighborPortal> goalNeighborPortals = new NativeList<GoalNeighborPortal>(Allocator.Temp);
-                int goalSectorIndex = FlowFieldUtilities.GetSector1D(goalIndex, sectorColAmount, sectorMatrixColAmount);
-                NativeArray<float> targetSectorCostGrid = RunFM(goalSectorIndex, FlowFieldUtilities.GetLocal1D(goalIndex, sectorColAmount));
-
-                SectorNode sectorNode = sectorNodes[goalSectorIndex];
-                int winPtr = sectorNode.SecToWinPtr;
-                int winCnt = sectorNode.SecToWinCnt;
-                for (int i = 0; i < winCnt; i++)
-                {
-                    WindowNode windowNode = windowNodes[secToWinPtrs[winPtr + i]];
-                    int porPtr = windowNode.PorPtr;
-                    int porCnt = windowNode.PorCnt;
-                    for (int j = 0; j < porCnt; j++)
-                    {
-                        int portalIndex = j + porPtr;
-                        PortalNode portalNode = portalNodes[portalIndex];
-                        int portalLocalIndexAtSector = FlowFieldUtilities.GetLocal1dInSector(portalNode, goalSectorIndex, sectorMatrixColAmount, sectorColAmount);
-                        float cost = targetSectorCostGrid[portalLocalIndexAtSector];
-                        if(cost == float.MaxValue) { continue; }
-
-                        goalNeighborPortals.Add(new GoalNeighborPortal(portalIndex, cost));
-                    }
-                }
-                return goalNeighborPortals.AsArray();
-            }
-            NativeArray<float> RunFM(int sectorIndex, int startLocalIndex)
-            {
-                NativeArray<float> targetSectorCostsGrid = new NativeArray<float>(sectorTileAmount, Allocator.Temp);
-                NativeSlice<byte> sectorCosts = new NativeSlice<byte>(costs, sectorIndex * sectorTileAmount, sectorTileAmount);
-                NativeBitArray isBlocked = new NativeBitArray(sectorTileAmount, Allocator.Temp);
-                NativeQueue<int> fastMarchingQueue = new NativeQueue<int>(Allocator.Temp);
-                int4 directions_N_E_S_W;
-                int4 directions_NE_SE_SW_NW;
-                bool4 isBlocked_N_E_S_W;
-
-
-                //Initialize grid
-                for (int i = 0; i < targetSectorCostsGrid.Length; i++)
-                {
-                    bool tileIsUnwalkable = sectorCosts[i] == byte.MaxValue;
-                    targetSectorCostsGrid[i] = float.MaxValue;
-                    isBlocked.Set(i, tileIsUnwalkable);
-                }
-
-                targetSectorCostsGrid[startLocalIndex] = 0f;
-                isBlocked.Set(startLocalIndex, true);
-
-                SetNeighbourData(startLocalIndex);
-                EnqueueNeighbours();
-
-                //Remaining
-                while (!fastMarchingQueue.IsEmpty())
-                {
-                    int curIndex = fastMarchingQueue.Dequeue();
-                    SetNeighbourData(curIndex);
-                    targetSectorCostsGrid[curIndex] = GetCost();
-                    EnqueueNeighbours();
-                }
-                return targetSectorCostsGrid;
-
-                void SetNeighbourData(int curIndex)
-                {
-                    directions_N_E_S_W = new int4()
-                    {
-                        x = sectorColAmount,
-                        y = 1,
-                        z = -sectorColAmount,
-                        w = -1
-                    };
-                    directions_N_E_S_W += curIndex;
-                    directions_NE_SE_SW_NW = new int4()
-                    {
-                        x = sectorColAmount,
-                        y = -sectorColAmount,
-                        z = -sectorColAmount,
-                        w = sectorColAmount,
-                    };
-                    directions_NE_SE_SW_NW += new int4(1, 1, -1, -1);
-                    directions_NE_SE_SW_NW += curIndex;
-                    bool4 overflow_N_E_S_W = new bool4()
-                    {
-                        x = directions_N_E_S_W.x >= sectorTileAmount,
-                        y = (directions_N_E_S_W.y % sectorColAmount) == 0,
-                        z = directions_N_E_S_W.z < 0,
-                        w = (curIndex % sectorColAmount) == 0,
-                    };
-                    bool4 overflow_NE_SE_SW_NW = new bool4()
-                    {
-                        x = overflow_N_E_S_W.x || overflow_N_E_S_W.y,
-                        y = overflow_N_E_S_W.z || overflow_N_E_S_W.y,
-                        z = overflow_N_E_S_W.z || overflow_N_E_S_W.w,
-                        w = overflow_N_E_S_W.x || overflow_N_E_S_W.w,
-                    };
-                    directions_N_E_S_W = math.select(directions_N_E_S_W, curIndex, overflow_N_E_S_W);
-                    directions_NE_SE_SW_NW = math.select(directions_NE_SE_SW_NW, curIndex, overflow_NE_SE_SW_NW);
-                    isBlocked_N_E_S_W = new bool4()
-                    {
-                        x = isBlocked.IsSet(directions_N_E_S_W.x),
-                        y = isBlocked.IsSet(directions_N_E_S_W.y),
-                        z = isBlocked.IsSet(directions_N_E_S_W.z),
-                        w = isBlocked.IsSet(directions_N_E_S_W.w),
-                    };
-                }
-                float GetCost()
-                {
-                    float4 costs_N_E_S_W = new float4()
-                    {
-                        x = targetSectorCostsGrid[directions_N_E_S_W.x],
-                        y = targetSectorCostsGrid[directions_N_E_S_W.y],
-                        z = targetSectorCostsGrid[directions_N_E_S_W.z],
-                        w = targetSectorCostsGrid[directions_N_E_S_W.w],
-                    };
-                    costs_N_E_S_W += 1f;
-                    float4 costs_NE_SE_SW_NW = new float4()
-                    {
-                        x = targetSectorCostsGrid[directions_NE_SE_SW_NW.x],
-                        y = targetSectorCostsGrid[directions_NE_SE_SW_NW.y],
-                        z = targetSectorCostsGrid[directions_NE_SE_SW_NW.z],
-                        w = targetSectorCostsGrid[directions_NE_SE_SW_NW.w],
-                    };
-                    costs_NE_SE_SW_NW += 1.4f;
-                    float4 min4 = math.min(costs_N_E_S_W, costs_NE_SE_SW_NW);
-                    return math.min(min4.w, math.min(min4.z, math.min(min4.x, min4.y)));
-                }
-                void EnqueueNeighbours()
-                {
-                    if (!isBlocked_N_E_S_W.x)
-                    {
-                        fastMarchingQueue.Enqueue(directions_N_E_S_W.x);
-                        isBlocked.Set(directions_N_E_S_W.x, true);
-                    }
-                    if (!isBlocked_N_E_S_W.y)
-                    {
-                        fastMarchingQueue.Enqueue(directions_N_E_S_W.y);
-                        isBlocked.Set(directions_N_E_S_W.y, true);
-                    }
-                    if (!isBlocked_N_E_S_W.z)
-                    {
-                        fastMarchingQueue.Enqueue(directions_N_E_S_W.z);
-                        isBlocked.Set(directions_N_E_S_W.z, true);
-                    }
-                    if (!isBlocked_N_E_S_W.w)
-                    {
-                        fastMarchingQueue.Enqueue(directions_N_E_S_W.w);
-                        isBlocked.Set(directions_N_E_S_W.w, true);
-                    }
-                }
-
             }
             void RunAStar(int goalPortalIndex)
             {

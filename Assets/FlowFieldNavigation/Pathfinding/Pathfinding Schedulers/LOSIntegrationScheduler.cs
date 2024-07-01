@@ -38,7 +38,7 @@ namespace FlowFieldNavigation
                 PathfindingInternalData internalData = _pathContainer.PathfindingInternalDataList[pathIndex];
                 PathDestinationData destinationData = _pathContainer.PathDestinationDataList[pathIndex];
                 NativeArray<int> sectorToFlowStartTable = _pathContainer.SectorToFlowStartTables[pathIndex];
-                NativeHashSet<int> possbleGoalSectors = _pathContainer.PathAlreadyConsideredSectorIndexMaps[pathIndex];
+                NativeParallelMultiHashMap<int, int> pathToPossibleGoalSectorMap = _pathContainer.PathToPossibleGoalSectorsMap;
                 float goalRange = _pathContainer.PathRanges[pathIndex];
                 int2 targetIndex = FlowFieldUtilities.PosTo2D(destinationData.Destination, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
                 CostField pickedCostField = _navigationManager.FieldDataContainer.GetCostFieldWithOffset(destinationData.Offset);
@@ -66,6 +66,7 @@ namespace FlowFieldNavigation
 
                     LOSIntegrationJob losjob = new LOSIntegrationJob()
                     {
+                        PathIndex = pathIndex,
                         FieldGridStartPos = FlowFieldUtilities.FieldGridStartPosition,
                         SectorColAmount = FlowFieldUtilities.SectorColAmount,
                         SectorMatrixColAmount = FlowFieldUtilities.SectorMatrixColAmount,
@@ -79,7 +80,7 @@ namespace FlowFieldNavigation
                         Goal = destinationData.Destination,
                         GoalRange = goalRange,
                         Costs = pickedCostField.Costs,
-                        PossibleGoalSectors = possbleGoalSectors,
+                        PathToPossibleGoalSectorMap = pathToPossibleGoalSectorMap,
                         SectorToPicked = sectorToFlowStartTable,
                         IntegrationField = internalData.IntegrationField.AsArray(),
                         Target = targetIndex,
@@ -91,6 +92,7 @@ namespace FlowFieldNavigation
                 {
                     LOSIntegrationJob losjob = new LOSIntegrationJob()
                     {
+                        PathIndex = pathIndex,
                         FieldGridStartPos = FlowFieldUtilities.FieldGridStartPosition,
                         SectorColAmount = FlowFieldUtilities.SectorColAmount,
                         SectorMatrixColAmount = FlowFieldUtilities.SectorMatrixColAmount,
@@ -104,7 +106,7 @@ namespace FlowFieldNavigation
                         Goal = destinationData.Destination,
                         GoalRange = goalRange,
                         Costs = pickedCostField.Costs,
-                        PossibleGoalSectors = possbleGoalSectors,
+                        PathToPossibleGoalSectorMap = pathToPossibleGoalSectorMap,
                         SectorToPicked = sectorToFlowStartTable,
                         IntegrationField = internalData.IntegrationField.AsArray(),
                         Target = targetIndex,

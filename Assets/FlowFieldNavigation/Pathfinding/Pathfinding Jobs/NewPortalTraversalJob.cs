@@ -9,6 +9,7 @@ namespace FlowFieldNavigation
     [BurstCompile]
     internal struct NewPortalTraversalJob : IJob
     {
+        internal int PathIndex;
         internal int2 Target;
         internal float TileSize;
         internal float2 FieldGridStartPos;
@@ -30,20 +31,21 @@ namespace FlowFieldNavigation
         internal NativeList<int> PickedSectorIndicies;
         internal NativeList<IntegrationTile> IntegrationField;
         internal NativeList<int> SourcePortalIndexList;
-        internal NativeHashSet<int> PossibleGoalSectors;
         internal NativeList<PickedPortalDataRecord> PickedPortalDataRecords;
 
         [ReadOnly] internal NativeSlice<float2> SourcePositions;
-        [ReadOnly] internal NativeArray<byte> Costs;
         [ReadOnly] internal NativeArray<SectorNode> SectorNodes;
         [ReadOnly] internal NativeArray<int> SecToWinPtrs;
         [ReadOnly] internal NativeArray<WindowNode> WindowNodes;
         [ReadOnly] internal NativeArray<PortalNode> PortalNodes;
         [ReadOnly] internal NativeArray<PortalToPortal> PorPtrs;
         [ReadOnly] internal NativeArray<UnsafeList<int>> IslandFields;
+        [ReadOnly] internal UnsafeList<GoalNeighborPortal> GoalNeighborPortals;
+        [ReadOnly] internal NativeParallelMultiHashMap<int, int> PathIndexToGoalSectorMap;
         public void Execute()
         {
             PortalTraversalProc.Run(
+                PathIndex,
                 Target,
                 IslandSeed,
                 FieldColAmount,
@@ -57,7 +59,6 @@ namespace FlowFieldNavigation
                 NewPickedSectorStartIndex,
                 LosRange,
                 PickedPortalDataRecords,
-                Costs,
                 IntegrationField,
                 PortalSequence,
                 PortalSequenceSlices,
@@ -72,8 +73,9 @@ namespace FlowFieldNavigation
                 SecToWinPtrs,
                 PortalNodes,
                 IslandFields,
-                PossibleGoalSectors,
-                SectorWithinLosRange);
+                SectorWithinLosRange,
+                GoalNeighborPortals,
+                PathIndexToGoalSectorMap);
         }
     }
 }

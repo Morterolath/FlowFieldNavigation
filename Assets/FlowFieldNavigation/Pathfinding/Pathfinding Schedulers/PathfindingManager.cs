@@ -162,7 +162,7 @@ namespace FlowFieldNavigation
             NativeArray<float> pathRanges = _pathContainer.PathRanges.AsArray();
             NativeArray<int> pathIslandSeedsAsFieldIndex = _pathContainer.PathIslandSeedsAsFieldIndicies.AsArray();
             NativeList<int> unusedPathIndexList = _pathContainer.UnusedPathIndexList;
-            NativeParallelMultiHashMap<int, int> pathIndexToGoalSectorsMap = _pathContainer.PathIndexToGoalSectorsMap;
+            NativeParallelMultiHashMap<int, int> pathIndexToGoalSectorsMap = _pathContainer.PathToPossibleGoalSectorsMap;
             NativeList<UnsafeList<GoalNeighborPortal>> pathGoalNeighborPortals = _pathContainer.PathGoalNeighborPortals;
 
             //Copy agent positions from transforms

@@ -35,8 +35,8 @@ namespace FlowFieldNavigation
                 PathfindingInternalData pathInternalData = _pathContainer.PathfindingInternalDataList[pathIndex];
                 PathDestinationData destinationData = _pathContainer.PathDestinationDataList[pathIndex];
                 float goalRange = _pathContainer.PathRanges[pathIndex];
-                NativeHashSet<int> possibleGoalSectors = _pathContainer.PathAlreadyConsideredSectorIndexMaps[pathIndex];
                 NativeArray<int> sectorToFlowStartTable = _pathContainer.SectorToFlowStartTables[pathIndex];
+                UnsafeList<PathSectorState> sectorStateTable = _pathContainer.PathSectorStateTableList[pathIndex];
                 CostField pickedCostField = _navigationManager.FieldDataContainer.GetCostFieldWithOffset(destinationData.Offset);
                 int2 targetIndex = FlowFieldUtilities.PosTo2D(destinationData.Destination, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
 
@@ -56,7 +56,7 @@ namespace FlowFieldNavigation
                     SectorTileAmount = FlowFieldUtilities.SectorTileAmount,
                     FieldColAmount = FlowFieldUtilities.FieldColAmount,
                     FieldRowAmount = FlowFieldUtilities.FieldRowAmount,
-                    PossibleGoalSectors = possibleGoalSectors,
+                    SectorStateTable = sectorStateTable,
                     SectorFlowStartTable = sectorToFlowStartTable,
                     SectorIndiciesToCalculateIntegration = sectorIndiciesToCalculateIntegration,
                     CostField = pickedCostField.Costs,

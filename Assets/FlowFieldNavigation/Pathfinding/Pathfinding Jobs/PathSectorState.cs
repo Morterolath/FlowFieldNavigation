@@ -9,6 +9,7 @@ namespace FlowFieldNavigation
         Source = 2,
         FlowCalculated = 4,
         IntegrationCalculated = 8,
+        PossibleGoal = 16,
     }
 
 

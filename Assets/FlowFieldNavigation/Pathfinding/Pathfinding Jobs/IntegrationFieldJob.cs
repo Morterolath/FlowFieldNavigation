@@ -26,7 +26,7 @@ namespace FlowFieldNavigation
         [ReadOnly] internal NativeArray<byte> CostField;
         [ReadOnly] internal NativeParallelMultiHashMap<int, ActiveWaveFront> SectorToWaveFrontsMap;
         [ReadOnly] internal NativeArray<int> SectorFlowStartTable;
-        [ReadOnly] internal NativeHashSet<int> PossibleGoalSectors;
+        [ReadOnly] internal UnsafeList<PathSectorState> SectorStateTable;
         internal NativeArray<IntegrationTile> IntegrationField;
         public void Execute()
         {
@@ -95,7 +95,7 @@ namespace FlowFieldNavigation
                     Mark = startTile.Mark,
                 };
             }
-            if (PossibleGoalSectors.Contains(sectorIndex))
+            if ((SectorStateTable[sectorIndex] & PathSectorState.PossibleGoal) == PathSectorState.PossibleGoal)
             {
                 for (int i = 0; i < integrationFieldSector.Length; i++)
                 {

@@ -42,13 +42,11 @@ namespace FlowFieldNavigation
                 NativeArray<OverlappingDirection> sectorOverlappingDirectionTable = _pathContainer.SectorOverlappingDirectionTableList[pathIndex];
                 SectorBitArray sectorBitArray = _pathContainer.PathSectorBitArrays[pathIndex];
                 NativeArray<int> sectorToFlowStartTable = _pathContainer.SectorToFlowStartTables[pathIndex];
-                NativeHashMap<int,int> goalNeighborIndexToGoalIndexMap = _pathContainer.PathGoalNeighbourIndexToGoalIndexMaps[pathIndex];
-                NativeList<int> goalTraversalDataFieldIndexList = _pathContainer.PathGoalTraversalDataFieldIndexLists[pathIndex];
-                NativeHashSet<int> alreadyConsideredGoalSectorIndexMap = _pathContainer.PathAlreadyConsideredSectorIndexMaps[pathIndex];
+                UnsafeList<GoalNeighborPortal> goalNeighborPortals = _pathContainer.PathGoalNeighborPortals[pathIndex];
+                NativeParallelMultiHashMap<int, int> pathIndexToGoalSectorMap = _pathContainer.PathToPossibleGoalSectorsMap;
                 float goalRange = _pathContainer.PathRanges[pathIndex];
                 int islandSeed = _pathContainer.PathIslandSeedsAsFieldIndicies[pathIndex];
                 int2 destinationIndex = FlowFieldUtilities.PosTo2D(destinationData.Destination, FlowFieldUtilities.TileSize, FlowFieldUtilities.FieldGridStartPosition);
-                CostField pickedCostField = _navigationManager.FieldDataContainer.GetCostFieldWithOffset(destinationData.Offset);
                 FieldGraph pickedFieldGraph = _navigationManager.FieldDataContainer.GetFieldGraphWithOffset(destinationData.Offset);
                 portalTraversalData.PathAdditionSequenceSliceStartIndex.Value = portalTraversalData.PortalSequenceSlices.Length;
                 portalTraversalData.NewPickedSectorStartIndex.Value = pathInternalData.PickedSectorList.Length;
@@ -58,6 +56,7 @@ namespace FlowFieldNavigation
 
                 NewPortalTraversalJob newPortalTraversalJob = new NewPortalTraversalJob()
                 {
+                    PathIndex = pathIndex,
                     IslandSeed = islandSeed,
                     TileSize = FlowFieldUtilities.TileSize,
                     FieldColAmount = FlowFieldUtilities.FieldColAmount,
@@ -72,7 +71,6 @@ namespace FlowFieldNavigation
                     SourcePositions = pathRequestSource,
                     PorPtrs = pickedFieldGraph.PorToPorPtrs,
                     SectorNodes = pickedFieldGraph.SectorNodes,
-                    Costs = pickedCostField.Costs,
                     PortalTraversalDataArray = porTravDataArray,
                     SourcePortalIndexList = portalTraversalData.SourcePortalIndexList,
                     IslandFields = pickedFieldGraph.IslandFields,
@@ -83,11 +81,12 @@ namespace FlowFieldNavigation
                     PortalSequenceSlices = portalTraversalData.PortalSequenceSlices,
                     PortalSequence = portalTraversalData.PortalSequence,
                     IntegrationField = pathInternalData.IntegrationField,
-                    PossibleGoalSectors = alreadyConsideredGoalSectorIndexMap,
                     PickedPortalDataRecords = portalTraversalData.PickedPortalDataRecords,
                     LosRange = FlowFieldUtilities.LOSRange,
                     SectorWithinLosRange = pathInternalData.SectorWithinLOSState,
                     NewPickedSectorStartIndex = pathInternalData.PickedSectorList.Length,
+                    GoalNeighborPortals = goalNeighborPortals,
+                    PathIndexToGoalSectorMap = pathIndexToGoalSectorMap,
                 };
                 JobHandle travHandle = newPortalTraversalJob.Schedule(dependency);
 

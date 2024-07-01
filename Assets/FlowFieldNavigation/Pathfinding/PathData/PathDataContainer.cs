@@ -10,7 +10,6 @@ namespace FlowFieldNavigation
 {
     internal class PathDataContainer
     {
-        internal List<NativeHashMap<int, int>> PathGoalNeighbourIndexToGoalIndexMaps;
         internal NativeList<float> PathRanges;
         internal NativeList<float> PathDesiredRanges;
         internal NativeList<FlowData> ExposedFlowData;
@@ -32,12 +31,11 @@ namespace FlowFieldNavigation
         internal NativeList<int> PathSubscriberCounts;
         internal List<NativeArray<OverlappingDirection>> SectorOverlappingDirectionTableList;
         internal NativeList<int> RemovedExposedFlowAndLosIndicies;
-        internal List<NativeList<int>> PathGoalTraversalDataFieldIndexLists;
-        internal List<NativeHashSet<int>> PathAlreadyConsideredSectorIndexMaps;
+        //internal List<NativeHashSet<int>> PathAlreadyConsideredSectorIndexMaps;
         internal NativeList<int> PathIslandSeedsAsFieldIndicies;
         internal NativeParallelMultiHashMap<int, int> PathIndexToUpdateSeedsMap;
         internal NativeList<int> UnusedPathIndexList;
-        internal NativeParallelMultiHashMap<int, int> PathIndexToGoalSectorsMap;
+        internal NativeParallelMultiHashMap<int, int> PathToPossibleGoalSectorsMap;
         internal NativeList<UnsafeList<GoalNeighborPortal>> PathGoalNeighborPortals;
 
         FieldDataContainer _fieldProducer;
@@ -70,12 +68,9 @@ namespace FlowFieldNavigation
             ExposedLosData = new NativeList<bool>(Allocator.Persistent);
             PathRanges = new NativeList<float>(Allocator.Persistent);
             PathDesiredRanges = new NativeList<float>(Allocator.Persistent);
-            PathGoalNeighbourIndexToGoalIndexMaps = new List<NativeHashMap<int, int>>();
-            PathGoalTraversalDataFieldIndexLists = new List<NativeList<int>>();
-            PathAlreadyConsideredSectorIndexMaps = new List<NativeHashSet<int>>();
             PathIslandSeedsAsFieldIndicies = new NativeList<int>(Allocator.Persistent);
             PathIndexToUpdateSeedsMap = new NativeParallelMultiHashMap<int, int>(0, Allocator.Persistent);
-            PathIndexToGoalSectorsMap = new NativeParallelMultiHashMap<int, int>(0, Allocator.Persistent);
+            PathToPossibleGoalSectorsMap = new NativeParallelMultiHashMap<int, int>(0, Allocator.Persistent);
             PathGoalNeighborPortals = new NativeList<UnsafeList<GoalNeighborPortal>>(Allocator.Persistent);
         }
         internal void DisposeAll()
@@ -124,12 +119,9 @@ namespace FlowFieldNavigation
                     portalTraversalData.NewPathUpdateSeedIndicies.Dispose();
                     portalTraversalData.PickedPortalDataRecords.Dispose();
                     PathIndexToUpdateSeedsMap.Remove(i);
-                    PathGoalNeighbourIndexToGoalIndexMaps[i].Dispose();
-                    PathGoalTraversalDataFieldIndexLists[i].Dispose();
                     ExposedPathStateList[i] = PathState.Removed;
-                    PathAlreadyConsideredSectorIndexMaps[i].Dispose();
                     PathGoalNeighborPortals[i].Dispose();
-                    PathIndexToGoalSectorsMap.Remove(i);
+                    PathToPossibleGoalSectorsMap.Remove(i);
                     UnusedPathIndexList.Add(i);
                     PreallocationPack preallocations = new PreallocationPack()
                     {
@@ -199,9 +191,6 @@ namespace FlowFieldNavigation
                 PathPortalTraversalDataList.Add(new PathPortalTraversalData());
                 SectorOverlappingDirectionTableList.Add(new NativeArray<OverlappingDirection>());
                 SectorToFlowStartTables.Add(new NativeArray<int>());
-                PathGoalNeighbourIndexToGoalIndexMaps.Add(new NativeHashMap<int, int>());
-                PathGoalTraversalDataFieldIndexLists.Add(new NativeList<int>());
-                PathAlreadyConsideredSectorIndexMaps.Add(new NativeHashSet<int>());
             }
             PathSectorStateTableList.Length = newLength;
             PathDestinationDataList.Length = newLength;
@@ -274,9 +263,6 @@ namespace FlowFieldNavigation
             SectorToFlowStartTables[request.PathIndex] = new NativeArray<int>(FlowFieldUtilities.SectorMatrixTileAmount, Allocator.Persistent);
             PathRanges[request.PathIndex] = request.Range;
             PathDesiredRanges[request.PathIndex] = request.DesiredRange;
-            PathGoalNeighbourIndexToGoalIndexMaps[request.PathIndex] = new NativeHashMap<int, int>(0, Allocator.Persistent);
-            PathGoalTraversalDataFieldIndexLists[request.PathIndex] = new NativeList<int>(Allocator.Persistent);
-            PathAlreadyConsideredSectorIndexMaps[request.PathIndex] = new NativeHashSet<int>(0, Allocator.Persistent);
             PathIslandSeedsAsFieldIndicies[request.PathIndex] = islandSeed1d;
         }
     }

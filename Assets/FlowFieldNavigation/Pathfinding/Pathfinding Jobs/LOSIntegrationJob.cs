@@ -14,6 +14,7 @@ namespace FlowFieldNavigation
     [BurstCompile]
     internal struct LOSIntegrationJob : IJob
     {
+        internal int PathIndex;
         internal int2 Target;
         internal float2 Goal;
         internal float2 FieldGridStartPos;
@@ -28,11 +29,12 @@ namespace FlowFieldNavigation
         internal int SectorTileAmount;
 
         [ReadOnly] internal NativeArray<byte> Costs;
-        [ReadOnly] internal NativeHashSet<int> PossibleGoalSectors;
+        [ReadOnly] internal NativeParallelMultiHashMap<int, int> PathToPossibleGoalSectorMap;
         internal NativeArray<int> SectorToPicked;
         internal NativeArray<IntegrationTile> IntegrationField;
         public void Execute()
         {
+            int pathIndex = PathIndex;
             int sectorColAmount = SectorColAmount;
             int sectorTileAmount = SectorTileAmount;
             int sectorMatrixColAmount = SectorMatrixColAmount;
@@ -49,7 +51,7 @@ namespace FlowFieldNavigation
             NativeQueue<LocalIndex1d> integrationQueue = new NativeQueue<LocalIndex1d>(Allocator.Temp);
             NativeArray<byte> costs = Costs;
             NativeArray<IntegrationTile> integrationField = IntegrationField;
-            NativeHashSet<int> possibleGoalSectors = PossibleGoalSectors;
+            NativeParallelMultiHashMap<int, int> pathToGoalSectorMap = PathToPossibleGoalSectorMap;
 
             //LOOKUP TABLE
             int curLocal1d;
@@ -157,7 +159,7 @@ namespace FlowFieldNavigation
             NativeArray<int> GetRangeBorderTiles()
             {
                 NativeList<int> borderTiles = new NativeList<int>(Allocator.Temp);
-                NativeHashSet<int>.Enumerator possibleGoalSectorEnumerator = possibleGoalSectors.GetEnumerator();
+                NativeParallelMultiHashMap<int, int>.Enumerator possibleGoalSectorEnumerator = pathToGoalSectorMap.GetValuesForKey(pathIndex);
                 while (possibleGoalSectorEnumerator.MoveNext())
                 {
                     int sector = possibleGoalSectorEnumerator.Current;
