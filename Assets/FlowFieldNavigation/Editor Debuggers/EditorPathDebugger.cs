@@ -387,17 +387,30 @@ namespace FlowFieldNavigation
             for (int i = 0; i < sectorFlowStartTable.Length; i++)
             {
                 if (sectorFlowStartTable[i] == 0) { continue; }
-                int2 sector2d = FlowFieldUtilities.To2D(i, FlowFieldUtilities.SectorMatrixColAmount);
+                DebugSector(i,0f);
+            }
+
+            Gizmos.color = Color.cyan;
+            NativeParallelMultiHashMap<int, int>.Enumerator sectors = _pathContainer.PathIndexToGoalSectorsMap.GetValuesForKey(pathIndex);
+            while (sectors.MoveNext())
+            {
+                int sector = sectors.Current;
+                DebugSector(sector, 0.1f);
+            }
+
+            void DebugSector(int sector1d, float extraHeight)
+            {
+                int2 sector2d = FlowFieldUtilities.To2D(sector1d, FlowFieldUtilities.SectorMatrixColAmount);
                 float sectorSize = FlowFieldUtilities.SectorColAmount * FlowFieldUtilities.TileSize;
                 float2 sectorPos = FlowFieldUtilities.IndexToPos(sector2d, sectorSize, FlowFieldUtilities.FieldGridStartPosition);
                 float2 botLeft2 = sectorPos + new float2(-sectorSize / 2, -sectorSize / 2);
                 float2 topLeft2 = sectorPos + new float2(-sectorSize / 2, sectorSize / 2);
                 float2 botRight2 = sectorPos + new float2(sectorSize / 2, -sectorSize / 2);
                 float2 topRight2 = sectorPos + new float2(sectorSize / 2, sectorSize / 2);
-                float3 botLeft3 = new float3(botLeft2.x, sectorCornerHeights[i * 4], botLeft2.y);
-                float3 topLeft3 = new float3(topLeft2.x, sectorCornerHeights[i * 4 + 1], topLeft2.y);
-                float3 topRight3 = new float3(topRight2.x, sectorCornerHeights[i * 4 + 2], topRight2.y);
-                float3 botRight3 = new float3(botRight2.x, sectorCornerHeights[i * 4 + 3], botRight2.y);
+                float3 botLeft3 = new float3(botLeft2.x, sectorCornerHeights[sector1d * 4] + extraHeight, botLeft2.y);
+                float3 topLeft3 = new float3(topLeft2.x, sectorCornerHeights[sector1d * 4 + 1] + extraHeight, topLeft2.y);
+                float3 topRight3 = new float3(topRight2.x, sectorCornerHeights[sector1d * 4 + 2] + extraHeight, topRight2.y);
+                float3 botRight3 = new float3(botRight2.x, sectorCornerHeights[sector1d * 4 + 3] + extraHeight, botRight2.y);
                 Gizmos.DrawLine(botLeft3, topLeft3);
                 Gizmos.DrawLine(topLeft3, topRight3);
                 Gizmos.DrawLine(topRight3, botRight3);

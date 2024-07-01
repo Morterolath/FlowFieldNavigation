@@ -129,7 +129,7 @@ namespace FlowFieldNavigation
                     ExposedPathStateList[i] = PathState.Removed;
                     PathAlreadyConsideredSectorIndexMaps[i].Dispose();
                     PathGoalNeighborPortals[i].Dispose();
-
+                    PathIndexToGoalSectorsMap.Remove(i);
                     UnusedPathIndexList.Add(i);
                     PreallocationPack preallocations = new PreallocationPack()
                     {
