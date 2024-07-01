@@ -42,10 +42,6 @@ namespace FlowFieldNavigation
                 UnsafeListReadOnly<PortalNode> portalNodes = PortalNodesPerOffset[offset];
                 for(int j = goalSectorStart; j < goalSectorStart + goalSectorCount; j++)
                 {
-                    //for each portal of sector:
-                    //  check if it can reach the goal:
-                    //      if yes, add to map and duplicate set
-                    //      if no, do not do anything
                     int sectorIndex = staticGoalSectorsAsArray[j];
                     NativeSlice<float> sectorBfsResults = new NativeSlice<float>(staticGoalSectorBfsGridAsArray, j * SectorTileAmount, SectorTileAmount);
                     SectorNode sectorNode = sectorNodes[sectorIndex];

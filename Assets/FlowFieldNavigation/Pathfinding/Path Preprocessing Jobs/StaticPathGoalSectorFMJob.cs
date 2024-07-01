@@ -51,23 +51,23 @@ namespace FlowFieldNavigation
             }
 
             //initialize start indicies
+            NativeList<int> startIndicies = new NativeList<int>(Allocator.Temp);
             for(int i = 0; i < targetSectorCostsGrid.Length; i++)
             {
                 int localIndex = i;
                 int2 general2d = FlowFieldUtilities.GetGeneral2d(i, sectorIndex, SectorMatrixColAmount, SectorColAmount);
                 float2 indexPos = FlowFieldUtilities.IndexToPos(general2d, TileSize, FieldGridStartPos);
                 if(math.distancesq(indexPos, goal) > goalRangeSq && !goal2d.Equals(general2d)) { continue; }
+                if (isBlocked.IsSet(localIndex)) { continue; }
                 targetSectorCostsGrid[localIndex] = 0f;
                 isBlocked.Set(localIndex, true);
+                startIndicies.Add(localIndex);
             }
 
             //Enqueue start index neighbour
-            for (int i = 0; i < targetSectorCostsGrid.Length; i++)
+            for (int i = 0; i < startIndicies.Length; i++)
             {
-                int localIndex = i;
-                int2 general2d = FlowFieldUtilities.GetGeneral2d(i, sectorIndex, SectorMatrixColAmount, SectorColAmount);
-                float2 indexPos = FlowFieldUtilities.IndexToPos(general2d, TileSize, FieldGridStartPos);
-                if (math.distancesq(indexPos, goal) > goalRangeSq && !goal2d.Equals(general2d)) { continue; }
+                int localIndex = startIndicies[i];
                 SetNeighbourData(localIndex);
                 EnqueueNeighbours();
             }

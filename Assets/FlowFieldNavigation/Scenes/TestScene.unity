@@ -1367,7 +1367,7 @@ PrefabInstance:
     - target: {fileID: 5797102840990353135, guid: 36909ba34dc9cc34aa509e8036cbe263,
         type: 3}
       propertyPath: _debugOverlappingSectors
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5797102840990353135, guid: 36909ba34dc9cc34aa509e8036cbe263,
         type: 3}
@@ -1420,7 +1420,7 @@ PrefabInstance:
     - target: {fileID: 5836007236481813446, guid: f55c253bbe9585643ad7034e78074555,
         type: 3}
       propertyPath: _currentRange
-      value: 0
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 5836007236481813446, guid: f55c253bbe9585643ad7034e78074555,
         type: 3}
@@ -1435,7 +1435,7 @@ PrefabInstance:
     - target: {fileID: 5836007236481813446, guid: f55c253bbe9585643ad7034e78074555,
         type: 3}
       propertyPath: HoldToContuniouslySendPathRequest
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5836007236481813448, guid: f55c253bbe9585643ad7034e78074555,
         type: 3}
