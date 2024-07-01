@@ -94,6 +94,8 @@ namespace FlowFieldNavigation
         internal int Offset;
         internal int PathIndex;
         internal int SourceIsland;
+        internal int GoalSectorStartIndex;
+        internal int GoalSectorCount;
         internal DestinationType Type;
         internal int FlockIndex;
         internal bool ReconstructionFlag;
@@ -116,6 +118,8 @@ namespace FlowFieldNavigation
             SourceCount = 0;
             SourcePositionStartIndex = 0;
             PathIndex = -1;
+            GoalSectorStartIndex = -1;
+            GoalSectorCount = -1;
         }
         internal bool IsValid() => SourceCount != 0;
     }

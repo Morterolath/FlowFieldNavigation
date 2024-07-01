@@ -41,6 +41,9 @@ namespace FlowFieldNavigation
         NativeList<UnsafeListReadOnly<byte>> _costFieldCosts;
         NativeList<PathRequest> _requestedPaths;
         NativeReference<int> _newPathlistLength;
+        NativeList<int> StaticPathGoalSectors;
+        NativeList<int> StaticPathGoalSectorOffsets;
+        NativeList<float> StaticPathGoalSectorBfsGrids;
         List<JobHandle> _pathfindingTaskOrganizationHandle;
         internal PathfindingManager(FlowFieldNavigationManager navigationManager)
         {
@@ -73,6 +76,9 @@ namespace FlowFieldNavigation
             _costFieldCosts = new NativeList<UnsafeListReadOnly<byte>>(Allocator.Persistent);
             _requestedPaths = new NativeList<PathRequest>(Allocator.Persistent);
             _newPathlistLength = new NativeReference<int>(Allocator.Persistent);
+            StaticPathGoalSectors = new NativeList<int>(Allocator.Persistent);
+            StaticPathGoalSectorOffsets = new NativeList<int>(Allocator.Persistent);
+            StaticPathGoalSectorBfsGrids = new NativeList<float>(Allocator.Persistent);
         }
         internal void DisposeAll()
         {
@@ -148,6 +154,7 @@ namespace FlowFieldNavigation
             NativeArray<float> pathRanges = _pathContainer.PathRanges.AsArray();
             NativeArray<int> pathIslandSeedsAsFieldIndex = _pathContainer.PathIslandSeedsAsFieldIndicies.AsArray();
             NativeList<int> unusedPathIndexList = _pathContainer.UnusedPathIndexList;
+            NativeParallelMultiHashMap<int, int> pathIndexToGoalSectorsMap = _pathContainer.PathIndexToGoalSectorsMap;
 
             //Copy agent positions from transforms
             _agentPositions.Length = agentTransforms.length;
@@ -487,6 +494,23 @@ namespace FlowFieldNavigation
             };
             JobHandle pathIndexDetHandle = pathIndexDetermination.Schedule(sourceSubmitHandle);
             if (FlowFieldUtilities.DebugMode) { pathIndexDetHandle.Complete(); }
+
+            StaticPathRequestGoalSectorDeterminationJob staticGoalSectorDetermination = new StaticPathRequestGoalSectorDeterminationJob()
+            {
+                SectorColAmount = FlowFieldUtilities.SectorColAmount,
+                SectorMatrixRowAmount = FlowFieldUtilities.SectorMatrixRowAmount,
+                SectorMatrixColAmount = FlowFieldUtilities.SectorMatrixColAmount,
+                SectorTileAmount = FlowFieldUtilities.SectorTileAmount,
+                TileSize = FlowFieldUtilities.TileSize,
+                FieldGridStartPos = FlowFieldUtilities.FieldGridStartPosition,
+                StaticGoalSectorBfsGrids = StaticPathGoalSectorBfsGrids,
+                StaticGoalSectorOffsets = StaticPathGoalSectorOffsets,
+                StaticGoalSectors = StaticPathGoalSectors,
+                PathIndexToGoalSectors = pathIndexToGoalSectorsMap,
+                FinalPathRequests = _finalPathRequests,
+            };
+            JobHandle staticGoalSectorDeterminationHandle = staticGoalSectorDetermination.Schedule(pathIndexDetHandle);
+            if (FlowFieldUtilities.DebugMode) { staticGoalSectorDeterminationHandle.Complete(); }
 
             //run goal sector query for ranged paths
             //  add sectors to multihashmap k=path index v=sector index

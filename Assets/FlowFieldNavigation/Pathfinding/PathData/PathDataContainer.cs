@@ -37,6 +37,7 @@ namespace FlowFieldNavigation
         internal NativeList<int> PathIslandSeedsAsFieldIndicies;
         internal NativeParallelMultiHashMap<int, int> PathIndexToUpdateSeedsMap;
         internal NativeList<int> UnusedPathIndexList;
+        internal NativeParallelMultiHashMap<int, int> PathIndexToGoalSectorsMap;
 
         FieldDataContainer _fieldProducer;
         PathPreallocator _preallocator;
@@ -73,6 +74,7 @@ namespace FlowFieldNavigation
             PathAlreadyConsideredSectorIndexMaps = new List<NativeHashSet<int>>();
             PathIslandSeedsAsFieldIndicies = new NativeList<int>(Allocator.Persistent);
             PathIndexToUpdateSeedsMap = new NativeParallelMultiHashMap<int, int>(0, Allocator.Persistent);
+            PathIndexToGoalSectorsMap = new NativeParallelMultiHashMap<int, int>(0, Allocator.Persistent);
         }
         internal void DisposeAll()
         {

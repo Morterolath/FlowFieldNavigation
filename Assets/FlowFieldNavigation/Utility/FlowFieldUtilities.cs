@@ -37,6 +37,14 @@ namespace FlowFieldNavigation
         {
             return new int2(index % colAmount, index / colAmount);
         }
+        internal static bool SectorOutOfBounds(int2 sector2d, int sectorMatrixColAmount, int sectorMatrixRowAmount)
+        {
+            bool nOverflow = sector2d.y >= sectorMatrixRowAmount;
+            bool eOverflow = sector2d.x >= sectorMatrixColAmount;
+            bool sOveflow = sector2d.y < 0;
+            bool wOverflow = sector2d.x < 0;
+            return nOverflow | eOverflow | sOveflow | wOverflow;
+        }
         internal static int2 PosTo2D(float2 pos, float tileSize, float2 gridStartPos)
         {
             pos -= gridStartPos;
