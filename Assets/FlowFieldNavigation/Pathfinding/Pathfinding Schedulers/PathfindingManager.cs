@@ -44,9 +44,6 @@ namespace FlowFieldNavigation
         NativeList<int> StaticPathGoalSectors;
         NativeList<float> StaticPathGoalSectorBfsGrids;
         NativeList<int> StaticGoalSectorIndexToFinalPathRequestIndex;
-        NativeList<int> DynamicPathGoalSectors;
-        NativeList<float> DynamicPathGoalSectorBfsGrids;
-        NativeList<int> DynamicGoalSectorIndexToFinalPathRequestIndex;
         List<JobHandle> _pathfindingTaskOrganizationHandle;
         internal PathfindingManager(FlowFieldNavigationManager navigationManager)
         {
@@ -82,9 +79,6 @@ namespace FlowFieldNavigation
             StaticPathGoalSectors = new NativeList<int>(Allocator.Persistent);
             StaticGoalSectorIndexToFinalPathRequestIndex = new NativeList<int>(Allocator.Persistent);
             StaticPathGoalSectorBfsGrids = new NativeList<float>(Allocator.Persistent);
-            DynamicPathGoalSectors = new NativeList<int>(Allocator.Persistent);
-            DynamicGoalSectorIndexToFinalPathRequestIndex = new NativeList<int>(Allocator.Persistent);
-            DynamicPathGoalSectorBfsGrids = new NativeList<float>(Allocator.Persistent);
         }
         internal void DisposeAll()
         {
@@ -143,9 +137,6 @@ namespace FlowFieldNavigation
             StaticPathGoalSectors.Clear();
             StaticPathGoalSectorBfsGrids.Clear();
             StaticGoalSectorIndexToFinalPathRequestIndex.Clear();
-            DynamicPathGoalSectors.Clear();
-            DynamicPathGoalSectorBfsGrids.Clear();
-            DynamicGoalSectorIndexToFinalPathRequestIndex.Clear();
             _pathRequestSourceCount.Value = 0;
             _currentPathSourceCount.Value = 0;
 
@@ -514,7 +505,7 @@ namespace FlowFieldNavigation
             JobHandle pathIndexDetHandle = pathIndexDetermination.Schedule(sourceSubmitHandle);
             if (FlowFieldUtilities.DebugMode) { pathIndexDetHandle.Complete(); }
             
-            PathRequestGoalSectorDeterminationJob goalSectorDetermination = new PathRequestGoalSectorDeterminationJob()
+            StaticPathRequestGoalSectorDeterminationJob staticGoalSectorDetermination = new StaticPathRequestGoalSectorDeterminationJob()
             {
                 SectorColAmount = FlowFieldUtilities.SectorColAmount,
                 SectorMatrixRowAmount = FlowFieldUtilities.SectorMatrixRowAmount,
@@ -527,12 +518,9 @@ namespace FlowFieldNavigation
                 PathIndexToGoalSectors = pathIndexToGoalSectorsMap,
                 FinalPathRequests = _finalPathRequests,
                 StaticGoalSectorIndexToFinalPathRequestIndex = StaticGoalSectorIndexToFinalPathRequestIndex,
-                DynamicGoalSectorBfsGrids = DynamicPathGoalSectorBfsGrids,
-                DynamicGoalSectors = DynamicPathGoalSectors,
-                DynamicGoalSectorIndexToFinalPathRequestIndex = DynamicGoalSectorIndexToFinalPathRequestIndex,
             };
-            JobHandle goalSectorDeterminationHandle = goalSectorDetermination.Schedule(pathIndexDetHandle);
-            if (FlowFieldUtilities.DebugMode) { goalSectorDeterminationHandle.Complete(); }
+            JobHandle staticGoalSectorDeterminationHandle = staticGoalSectorDetermination.Schedule(pathIndexDetHandle);
+            if (FlowFieldUtilities.DebugMode) { staticGoalSectorDeterminationHandle.Complete(); }
             
             StaticPathGoalSectorFMJob goalSectorFmJob = new StaticPathGoalSectorFMJob()
             {
@@ -547,8 +535,8 @@ namespace FlowFieldNavigation
                 FinalPathRequests = _finalPathRequests,
                 StaticGoalSectorIndexToFinalPathRequestIndex = StaticGoalSectorIndexToFinalPathRequestIndex,
             };
-            JobHandle goalSectorFmHandle = goalSectorFmJob.Schedule(StaticPathGoalSectorBfsGrids.Length, FlowFieldUtilities.SectorTileAmount, goalSectorDeterminationHandle);
-            if (FlowFieldUtilities.DebugMode) { goalSectorDeterminationHandle.Complete(); }
+            JobHandle goalSectorFmHandle = goalSectorFmJob.Schedule(StaticPathGoalSectorBfsGrids.Length, FlowFieldUtilities.SectorTileAmount, staticGoalSectorDeterminationHandle);
+            if (FlowFieldUtilities.DebugMode) { staticGoalSectorDeterminationHandle.Complete(); }
 
             StaticPathGoalPortalDeterminationJob staticGoalPortalJob = new StaticPathGoalPortalDeterminationJob()
             {
@@ -566,7 +554,7 @@ namespace FlowFieldNavigation
             };
             JobHandle staticGoalPortalHandle = staticGoalPortalJob.Schedule(goalSectorFmHandle);
             if (FlowFieldUtilities.DebugMode) { staticGoalPortalHandle.Complete(); }
-            _pathfindingTaskOrganizationHandle.Add(goalSectorDeterminationHandle);
+            _pathfindingTaskOrganizationHandle.Add(staticGoalSectorDeterminationHandle);
         }
         void CompletePathEvaluation()
         {

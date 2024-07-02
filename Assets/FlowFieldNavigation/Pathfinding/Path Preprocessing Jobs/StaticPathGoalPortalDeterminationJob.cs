@@ -30,7 +30,6 @@ namespace FlowFieldNavigation
             {
                 FinalPathRequest request = finalPathRequestsAsArray[i];
                 if (!request.IsValid()) { continue; }
-                if(request.Type != DestinationType.StaticDestination) { continue; }
                 int goalSectorStart = request.GoalSectorStartIndex;
                 int goalSectorCount = request.GoalSectorCount;
                 int pathIndex = request.PathIndex;
